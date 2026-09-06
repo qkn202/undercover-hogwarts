@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --hogwarts-gold: #c8aa6e;
+    --hogwarts-dark: #0f0a17;
+    --hogwarts-parchment: #1a1226;
+  }
+
+  body {
+    background-color: #0c0814;
+    color: #e6e4e1;
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(116, 0, 1, 0.15) 0%, transparent 60%),
+      radial-gradient(circle at 90% 90%, rgba(26, 71, 42, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 10% 90%, rgba(14, 26, 64, 0.15) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Scrollbar for parchment lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #120d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #342250;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c8aa6e;
+}
