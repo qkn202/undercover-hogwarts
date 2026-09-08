@@ -152,6 +152,10 @@ export function App() {
   // Kicked players tracker for Host to block rejoining
   const kickedPlayerIdsRef = useRef<Set<string>>(new Set());
 
+  // Ghost player tracker: timers for players whose presence dropped in LOBBY (10s grace period before auto-eviction)
+  const lobbyDisconnectTimersRef = useRef<Map<string, any>>(new Map());
+  const [offlinePlayerIds, setOfflinePlayerIds] = useState<string[]>([]);
+
   // Helper for stable session player IDs
   const getOrCreatePlayerId = (isHost: boolean): string => {
     const key = isHost ? 'hogw_host_id' : 'hogw_tab_player_id';
@@ -213,6 +217,9 @@ export function App() {
     // 3. Clear storage and session
     clearLocalSession();
     roleHistoryRef.current.clear();
+    lobbyDisconnectTimersRef.current.forEach((t) => clearTimeout(t));
+    lobbyDisconnectTimersRef.current.clear();
+    setOfflinePlayerIds([]);
 
     // 4. Destroy network connection cleanly and create a fresh manager
     if (netRef.current) {
@@ -265,6 +272,13 @@ export function App() {
           return;
         }
 
+        // If an auto-eviction timer was active for this player, cancel it immediately!
+        if (lobbyDisconnectTimersRef.current.has(incomingPlayer.id)) {
+          clearTimeout(lobbyDisconnectTimersRef.current.get(incomingPlayer.id));
+          lobbyDisconnectTimersRef.current.delete(incomingPlayer.id);
+          setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+        }
+
         setPlayers((prev) => {
           // Check if player with same ID or same Name already exists
           const existingIndex = prev.findIndex(
@@ -279,6 +293,11 @@ export function App() {
             // RECONNECT: Merge with existing player without adding duplicate!
             const existing = prev[existingIndex];
             console.log(`[Host] Player reconnecting: ${incomingPlayer.name} (old id: ${existing.id}, new id: ${incomingPlayer.id})`);
+
+            if (existing.id !== incomingPlayer.id && lobbyDisconnectTimersRef.current.has(existing.id)) {
+              clearTimeout(lobbyDisconnectTimersRef.current.get(existing.id));
+              lobbyDisconnectTimersRef.current.delete(existing.id);
+            }
 
             const merged: Player = {
               ...existing,
@@ -329,6 +348,12 @@ export function App() {
         if (!myPlayer?.isHost) return;
         const leftPlayerId = msg.payload?.playerId || msg.senderId;
         console.log('[Host] Player explicitly left:', leftPlayerId);
+
+        if (lobbyDisconnectTimersRef.current.has(leftPlayerId)) {
+          clearTimeout(lobbyDisconnectTimersRef.current.get(leftPlayerId));
+          lobbyDisconnectTimersRef.current.delete(leftPlayerId);
+          setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+        }
 
         setPlayers((prev) => {
           const updated = prev.filter((p) => p.id !== leftPlayerId);
@@ -567,11 +592,50 @@ export function App() {
           }
         }
       };
+      netRef.current.onPeerJoined = (peerId) => {
+        console.log('[Host] Peer presence joined:', peerId);
+        if (lobbyDisconnectTimersRef.current.has(peerId)) {
+          console.log(`[Host] Player ${peerId} returned to lobby! Cancelling auto-removal.`);
+          clearTimeout(lobbyDisconnectTimersRef.current.get(peerId));
+          lobbyDisconnectTimersRef.current.delete(peerId);
+          setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+        }
+      };
+
       netRef.current.onPeerLeft = (peerId, playerId) => {
-        console.log('[Host] Peer connection dropped/paused (mobile backgrounded):', peerId, playerId);
-        // CRITICAL FIX: NEVER remove players from the room on connection drops!
-        // Mobile phones frequently pause WebRTC when switching tabs, chatting, or locking screen.
-        // Players are ONLY removed if they explicitly click "Rời Phòng" or Host manually kicks them.
+        console.log('[Host] Peer presence left/dropped:', peerId, playerId);
+        // Only auto-evict if we are in LOBBY (phòng chờ). In PLAYING mode, positions and cards are preserved.
+        if (myPlayer?.isHost && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME')) {
+          if (!lobbyDisconnectTimersRef.current.has(playerId)) {
+            console.log(`[Host] Scheduling auto-removal of ghost player ${playerId} from lobby in 10s if not returned...`);
+            const timer = setTimeout(() => {
+              lobbyDisconnectTimersRef.current.delete(playerId);
+              setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+
+              const isStillOnline = netRef.current?.isPlayerInPresence(playerId);
+              if (!isStillOnline) {
+                console.log(`[Host] Auto-evicting confirmed ghost player ${playerId} from waiting lobby.`);
+                setPlayers((prev) => {
+                  const updated = prev.filter((p) => p.id !== playerId);
+                  if (netRef.current) {
+                    netRef.current.broadcastRoomState({
+                      roomCode,
+                      hostId: myPlayer.id,
+                      status: 'LOBBY',
+                      players: updated,
+                      config,
+                      roundNumber,
+                    });
+                  }
+                  return updated;
+                });
+              }
+            }, 10000);
+
+            lobbyDisconnectTimersRef.current.set(playerId, timer);
+            setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+          }
+        }
       };
     }
   });
@@ -968,6 +1032,24 @@ export function App() {
     };
   }, [myPlayer]);
 
+  // Guest beforeunload listener: inform Host when closing tab so nick is immediately removed from lobby
+  useEffect(() => {
+    const handleGuestUnload = () => {
+      if (myPlayer && !myPlayer.isHost && netRef.current) {
+        netRef.current.sendToHost({
+          type: 'PLAYER_LEFT',
+          senderId: myPlayer.id,
+          payload: { playerId: myPlayer.id },
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleGuestUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleGuestUnload);
+    };
+  }, [myPlayer]);
+
   // 10-minute host disconnect countdown timer (clears session and evicts zombie room)
   useEffect(() => {
     if (!hostDisconnectedAt || gameStatus === 'WELCOME') {
@@ -1010,7 +1092,10 @@ export function App() {
         });
       }
     }
-    cleanupAndExitToWelcome();
+    // Allow 120ms for the message to be dispatched over websocket buffer before teardown
+    setTimeout(() => {
+      cleanupAndExitToWelcome();
+    }, 120);
   };
 
   // Action: Host adds AI Bot
@@ -1035,6 +1120,11 @@ export function App() {
   // Action: Host removes Player / Bot
   const handleRemovePlayer = (playerId: string) => {
     if (!myPlayer?.isHost) return;
+    if (lobbyDisconnectTimersRef.current.has(playerId)) {
+      clearTimeout(lobbyDisconnectTimersRef.current.get(playerId));
+      lobbyDisconnectTimersRef.current.delete(playerId);
+      setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+    }
     kickedPlayerIdsRef.current.add(playerId);
     const updated = players.filter((p) => p.id !== playerId);
     setPlayers(updated);
@@ -1078,9 +1168,36 @@ export function App() {
   const handleStartGame = () => {
     if (!myPlayer?.isHost) return;
 
+    // Clean up any confirmed ghost players whose presence dropped in lobby
+    const activePlayers = players.filter((p) => {
+      if (p.isAi || p.isHost) return true;
+      if (lobbyDisconnectTimersRef.current.has(p.id) && !netRef.current?.isPlayerInPresence(p.id)) {
+        console.log(`[Host] Evicting ghost player before game start: ${p.name}`);
+        clearTimeout(lobbyDisconnectTimersRef.current.get(p.id));
+        lobbyDisconnectTimersRef.current.delete(p.id);
+        return false;
+      }
+      return true;
+    });
+
+    if (activePlayers.length !== players.length) {
+      setPlayers(activePlayers);
+      setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+      if (netRef.current) {
+        netRef.current.broadcastRoomState({
+          roomCode,
+          hostId: myPlayer.id,
+          status: 'LOBBY',
+          players: activePlayers,
+          config,
+          roundNumber,
+        });
+      }
+    }
+
     const isSpectator = config.hostRole === 'GAME_MASTER';
     // When Host is GAME_MASTER, only non-host players receive secret cards
-    const cardPlayers = isSpectator ? players.filter((p) => !p.isHost) : players;
+    const cardPlayers = isSpectator ? activePlayers.filter((p) => !p.isHost) : activePlayers;
     if (cardPlayers.length < 3) return;
 
     // Pick random word pair based on category
@@ -1098,7 +1215,7 @@ export function App() {
     roleHistoryRef.current = updatedHistory;
 
     // Assign roles & speaking order to players
-    const assignedPlayers: Player[] = players.map((p) => {
+    const assignedPlayers: Player[] = activePlayers.map((p) => {
       if (isSpectator && p.isHost) {
         return {
           ...p,
@@ -1382,6 +1499,7 @@ export function App() {
             myPlayerId={myPlayer.id}
             players={players}
             config={config}
+            offlinePlayerIds={offlinePlayerIds}
             onUpdateConfig={handleUpdateConfig}
             onAddBot={handleAddBot}
             onRemovePlayer={handleRemovePlayer}

@@ -50,6 +50,18 @@ export class NetworkManager {
     return false;
   }
 
+  public isPlayerInPresence(playerId: string): boolean {
+    if (!this.channel) return false;
+    const presenceState = this.channel.presenceState() || {};
+    return !!presenceState[playerId];
+  }
+
+  public getPresentPlayerIds(): string[] {
+    if (!this.channel) return [];
+    const presenceState = this.channel.presenceState() || {};
+    return Object.keys(presenceState);
+  }
+
   private startHeartbeat(isHost: boolean) {
     this.stopHeartbeat();
     this.heartbeatInterval = setInterval(() => {
@@ -512,13 +524,23 @@ export class NetworkManager {
       this.hostDisconnectTimer = null;
     }
     if (this.channel) {
-      try {
-        this.channel.untrack();
-        this.supabase.removeChannel(this.channel);
-      } catch (e) {
-        console.warn('[Supabase] Channel remove warning:', e);
-      }
+      const chan = this.channel;
       this.channel = null;
+      try {
+        chan.untrack().finally(() => {
+          try {
+            this.supabase.removeChannel(chan);
+          } catch (e) {
+            console.warn('[Supabase] Channel remove warning:', e);
+          }
+        });
+      } catch (e) {
+        try {
+          this.supabase.removeChannel(chan);
+        } catch (e2) {
+          console.warn('[Supabase] Channel remove warning:', e2);
+        }
+      }
     }
   }
 }

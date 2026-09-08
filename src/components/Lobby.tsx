@@ -17,6 +17,7 @@ interface LobbyProps {
   onStartGame: () => void;
   onLeaveRoom?: () => void;
   onRenamePlayer?: (newName: string) => void;
+  offlinePlayerIds?: string[];
 }
 
 
@@ -32,6 +33,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onStartGame,
   onLeaveRoom,
   onRenamePlayer,
+  offlinePlayerIds = [],
 }) => {
   const [showQr, setShowQr] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -504,6 +506,11 @@ export const Lobby: React.FC<LobbyProps> = ({
                       {p.isAi && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-900/40 text-blue-300 border border-blue-600/40 font-mono flex items-center gap-0.5">
                           <Bot size={10} /> AI
+                        </span>
+                      )}
+                      {offlinePlayerIds.includes(p.id) && !p.isAi && !p.isHost && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950/70 text-amber-300 border border-amber-600/50 font-mono animate-pulse">
+                          Mất kết nối...
                         </span>
                       )}
                     </div>
