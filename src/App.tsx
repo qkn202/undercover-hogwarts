@@ -295,6 +295,8 @@ export function App() {
                 netRef.current?.sendSecretCard(merged.id, {
                   role: merged.role!,
                   word: merged.word || null,
+                  hint: currentPair?.hint,
+                  speakingOrder: merged.speakingOrder,
                 });
               }, 150);
             }
@@ -581,19 +583,21 @@ export function App() {
         console.log('[App] Tab resumed / focused. Checking connection status...');
 
         if (myPlayer && !myPlayer.isHost && roomCode) {
-          const isConnected = netRef.current?.isHostConnected();
-          if (!isConnected) {
-            console.log('[App] Host connection down while in background. Reconnecting automatically...');
+          const isHealthy = netRef.current?.isSocketHealthy();
+          if (!isHealthy) {
+            console.log('[App] Socket down or unhealthy while in background. Reconnecting client...');
             setConnStatus('CONNECTING');
             const ok = await netRef.current?.reconnectClient(roomCode, myPlayer);
             if (ok) {
               setConnStatus('CONNECTED');
               setErrorMsg(null);
+              setHostDisconnectedAt(null);
+              setDisconnectCountdown(null);
             } else {
               setConnStatus('ERROR');
             }
           } else {
-            // Already connected: send a quick sync refresh
+            // Socket is healthy: immediately send sync refresh to Host
             netRef.current?.sendToHost({
               type: 'JOIN_REQUEST',
               senderId: myPlayer.id,
@@ -601,8 +605,20 @@ export function App() {
             });
           }
         } else if (myPlayer?.isHost) {
-          // Host: Ensure signaling connection is active
-          netRef.current?.reconnectHostIfNeeded();
+          // Host: Ensure signaling connection is active and broadcast state update
+          await netRef.current?.reconnectHostIfNeeded(myPlayer);
+          setHostDisconnectedAt(null);
+          setDisconnectCountdown(null);
+          if (netRef.current && players.length > 0) {
+            netRef.current.broadcastRoomState({
+              roomCode,
+              hostId: myPlayer.id,
+              status: gameStatus === 'WELCOME' ? 'LOBBY' : (gameStatus as GameStatus),
+              players,
+              config,
+              roundNumber,
+            });
+          }
         }
       }
     };
@@ -614,7 +630,7 @@ export function App() {
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
     };
-  }, [myPlayer, roomCode]);
+  }, [myPlayer, roomCode, players, config, roundNumber, gameStatus]);
 
   // Auto-restore session on refresh OR Auto-join directly when URL contains ?room=CODE
   useEffect(() => {
@@ -921,7 +937,7 @@ export function App() {
     return () => clearInterval(interval);
   }, [myPlayer?.isHost, roomCode]);
 
-  // Host beforeunload/pagehide listener: notify peers and record disconnect timestamp for 10-minute expiry
+  // Host beforeunload listener: only notify peers on true tab close, avoiding false alarms on mobile tab switch
   useEffect(() => {
     const handleHostUnload = () => {
       if (myPlayer?.isHost && netRef.current) {
@@ -939,17 +955,16 @@ export function App() {
           senderId: myPlayer.id,
           payload: {
             disconnectedAt: now,
-            message: 'Chủ phòng đã tạm ngắt kết nối hoặc đóng tab.',
+            message: 'Chủ phòng đã đóng tab.',
           },
         });
       }
     };
 
     window.addEventListener('beforeunload', handleHostUnload);
-    window.addEventListener('pagehide', handleHostUnload);
+    // DO NOT use pagehide: On iOS Safari and Android Chrome, pagehide fires whenever switching tabs or minimizing.
     return () => {
       window.removeEventListener('beforeunload', handleHostUnload);
-      window.removeEventListener('pagehide', handleHostUnload);
     };
   }, [myPlayer]);
 

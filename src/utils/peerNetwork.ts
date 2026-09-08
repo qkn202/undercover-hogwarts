@@ -11,6 +11,8 @@ export class NetworkManager {
   private myPlayerId: string = '';
   private hostPresent: boolean = true;
   private hostDisconnectedAt: number | null = null;
+  private hostDisconnectTimer: any = null;
+  private heartbeatInterval: any = null;
 
   public onMessageReceived?: (msg: PeerMessage) => void;
   public onConnectionStatusChange?: (status: 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR', errorMsg?: string) => void;
@@ -27,6 +29,48 @@ export class NetworkManager {
         },
       },
     });
+  }
+
+  public isSocketHealthy(): boolean {
+    if (!this.channel) return false;
+    const isJoined = this.channel.state === 'joined';
+    const isSocketConnected = (this.supabase as any)?.realtime?.isConnected?.() ?? true;
+    return isJoined && isSocketConnected;
+  }
+
+  private checkIsHostInPresence(): boolean {
+    if (!this.channel) return false;
+    const presenceState = this.channel.presenceState() || {};
+    for (const key in presenceState) {
+      const list = presenceState[key] as any[];
+      if (list && list.some((p) => p.isHost)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private startHeartbeat(isHost: boolean) {
+    this.stopHeartbeat();
+    this.heartbeatInterval = setInterval(() => {
+      if (this.channel && this.channel.state === 'joined') {
+        if (isHost) {
+          // Host sends lightweight ping to keep mobile cellular NAT ports open
+          this.broadcast({
+            type: 'PING',
+            senderId: this.myPlayerId,
+            payload: { timestamp: Date.now() },
+          });
+        }
+      }
+    }, 12000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 
   /**
@@ -92,6 +136,7 @@ export class NetworkManager {
                 isHost: true,
                 onlineAt: Date.now(),
               });
+              this.startHeartbeat(true);
               this.onConnectionStatusChange?.('CONNECTED');
               this.broadcast({
                 type: 'HOST_RECONNECTED',
@@ -163,19 +208,15 @@ export class NetworkManager {
           }
         });
 
-        // Track presence to detect if Host goes offline
+        // Track presence to detect if Host goes offline with grace period
         this.channel.on('presence', { event: 'sync' }, () => {
-          const presenceState = this.channel?.presenceState() || {};
-          let hostOnline = false;
-          for (const key in presenceState) {
-            const list = presenceState[key] as any[];
-            if (list.some((p) => p.isHost)) {
-              hostOnline = true;
-              break;
-            }
-          }
+          const hostOnline = this.checkIsHostInPresence();
 
           if (hostOnline) {
+            if (this.hostDisconnectTimer) {
+              clearTimeout(this.hostDisconnectTimer);
+              this.hostDisconnectTimer = null;
+            }
             if (!this.hostPresent) {
               console.log('[Supabase Client] Host detected back online via presence.');
               this.hostPresent = true;
@@ -183,11 +224,18 @@ export class NetworkManager {
               this.onHostReconnected?.();
             }
           } else {
-            if (this.hostPresent) {
-              console.log('[Supabase Client] Host presence lost.');
-              this.hostPresent = false;
-              this.hostDisconnectedAt = Date.now();
-              this.onHostDisconnected?.(this.hostDisconnectedAt);
+            // Grace period: do not immediately declare host disconnected on brief tab switches
+            if (this.hostPresent && !this.hostDisconnectTimer) {
+              console.log('[Supabase Client] Host presence not found in sync, starting 6s grace timer...');
+              this.hostDisconnectTimer = setTimeout(() => {
+                this.hostDisconnectTimer = null;
+                if (!this.checkIsHostInPresence()) {
+                  console.log('[Supabase Client] Host presence confirmed lost after 6s grace period.');
+                  this.hostPresent = false;
+                  this.hostDisconnectedAt = Date.now();
+                  this.onHostDisconnected?.(this.hostDisconnectedAt);
+                }
+              }, 6000);
             }
           }
         });
@@ -195,10 +243,18 @@ export class NetworkManager {
         this.channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
           const hostLeft = (leftPresences as any[]).some((p) => p.isHost);
           if (hostLeft) {
-            console.log('[Supabase Client] Host left event received.');
-            this.hostPresent = false;
-            this.hostDisconnectedAt = Date.now();
-            this.onHostDisconnected?.(this.hostDisconnectedAt);
+            if (this.hostPresent && !this.hostDisconnectTimer) {
+              console.log('[Supabase Client] Host leave event received, starting 6s grace timer...');
+              this.hostDisconnectTimer = setTimeout(() => {
+                this.hostDisconnectTimer = null;
+                if (!this.checkIsHostInPresence()) {
+                  console.log('[Supabase Client] Host confirmed left after grace period.');
+                  this.hostPresent = false;
+                  this.hostDisconnectedAt = Date.now();
+                  this.onHostDisconnected?.(this.hostDisconnectedAt);
+                }
+              }, 6000);
+            }
           }
         });
 
@@ -216,6 +272,7 @@ export class NetworkManager {
                 onlineAt: Date.now(),
               });
 
+              this.startHeartbeat(false);
               this.hostPresent = true;
               this.hostDisconnectedAt = null;
               this.onHostReconnected?.();
@@ -252,13 +309,35 @@ export class NetworkManager {
 
   public isHostConnected(): boolean {
     if (!this.channel) return false;
-    return this.hostPresent;
+    return this.hostPresent && this.isSocketHealthy();
   }
 
-  public reconnectHostIfNeeded(): void {
-    if (!this.channel || this.channel.state === 'closed' || this.channel.state === 'errored') {
-      console.log('[Supabase Host] Reconnecting channel...');
-      this.channel?.subscribe();
+  public async reconnectHostIfNeeded(hostPlayer?: Player): Promise<void> {
+    if (!this.channel || this.channel.state !== 'joined' || !this.isSocketHealthy()) {
+      console.log('[Supabase Host] Channel dead or disconnected. Re-subscribing...');
+      if (this.roomCode && hostPlayer) {
+        try {
+          await this.initHost(this.roomCode, hostPlayer);
+        } catch (e) {
+          console.warn('[Supabase Host] Failed to re-init host:', e);
+        }
+      } else if (this.channel) {
+        this.channel.subscribe();
+      }
+    } else {
+      if (hostPlayer) {
+        this.channel.track({
+          id: this.myPlayerId,
+          name: hostPlayer.name,
+          isHost: true,
+          onlineAt: Date.now(),
+        }).catch(() => {});
+      }
+      this.broadcast({
+        type: 'HOST_RECONNECTED',
+        senderId: this.myPlayerId,
+        payload: { timestamp: Date.now() },
+      });
     }
   }
 
@@ -291,19 +370,49 @@ export class NetworkManager {
   }
 
   private handleIncomingMessage(msg: PeerMessage) {
+    if (msg?.type === 'PING') {
+      if (this.hostDisconnectTimer) {
+        clearTimeout(this.hostDisconnectTimer);
+        this.hostDisconnectTimer = null;
+      }
+      if (!this.hostPresent) {
+        this.hostPresent = true;
+        this.hostDisconnectedAt = null;
+        this.onHostReconnected?.();
+      }
+      // Auto-reply PONG for latency benchmark or keep-alive
+      this.sendToHost({
+        type: 'PONG',
+        senderId: this.myPlayerId,
+        payload: { timestamp: Date.now(), seq: msg.payload?.seq },
+      });
+      return;
+    }
+
     if (msg?.type === 'HOST_DISCONNECTED') {
       const at = msg.payload?.disconnectedAt || Date.now();
       this.hostDisconnectedAt = at;
       this.hostPresent = false;
       this.onHostDisconnected?.(at);
     } else if (msg?.type === 'HOST_RECONNECTED') {
+      if (this.hostDisconnectTimer) {
+        clearTimeout(this.hostDisconnectTimer);
+        this.hostDisconnectTimer = null;
+      }
       this.hostDisconnectedAt = null;
       this.hostPresent = true;
       this.onHostReconnected?.();
-    } else if (this.hostDisconnectedAt) {
-      this.hostDisconnectedAt = null;
-      this.hostPresent = true;
-      this.onHostReconnected?.();
+    } else {
+      // Any other valid game message from Host clears host disconnect
+      if (this.hostDisconnectTimer) {
+        clearTimeout(this.hostDisconnectTimer);
+        this.hostDisconnectTimer = null;
+      }
+      if (!this.hostPresent) {
+        this.hostDisconnectedAt = null;
+        this.hostPresent = true;
+        this.onHostReconnected?.();
+      }
     }
 
     if (this.onMessageReceived) {
@@ -397,6 +506,11 @@ export class NetworkManager {
   }
 
   public destroy(): void {
+    this.stopHeartbeat();
+    if (this.hostDisconnectTimer) {
+      clearTimeout(this.hostDisconnectTimer);
+      this.hostDisconnectTimer = null;
+    }
     if (this.channel) {
       try {
         this.channel.untrack();
