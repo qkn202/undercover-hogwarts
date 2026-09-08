@@ -126,14 +126,20 @@ export class NetworkManager {
         });
 
         // Track presence to detect join/leave
-        this.channel.on('presence', { event: 'join' }, ({ key }) => {
-          console.log('[Supabase Host] Player joined presence:', key);
-          this.onPeerJoined?.(key);
+        this.channel.on('presence', { event: 'join' }, (payload: any) => {
+          const key = payload?.key;
+          if (key && key !== this.myPlayerId) {
+            console.log('[Supabase Host] Player joined presence:', key);
+            this.onPeerJoined?.(key);
+          }
         });
 
-        this.channel.on('presence', { event: 'leave' }, ({ key }) => {
-          console.log('[Supabase Host] Player left presence:', key);
-          this.onPeerLeft?.(key, key);
+        this.channel.on('presence', { event: 'leave' }, (payload: any) => {
+          const key = payload?.key;
+          if (key && key !== this.myPlayerId) {
+            console.log('[Supabase Host] Player left presence:', key);
+            this.onPeerLeft?.(key, key);
+          }
         });
 
         this.channel.subscribe(async (status) => {
@@ -252,8 +258,9 @@ export class NetworkManager {
           }
         });
 
-        this.channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
-          const hostLeft = (leftPresences as any[]).some((p) => p.isHost);
+        this.channel.on('presence', { event: 'leave' }, (payload: any) => {
+          const leftPresences = payload?.leftPresences;
+          const hostLeft = Array.isArray(leftPresences) && leftPresences.some((p: any) => p?.isHost);
           if (hostLeft) {
             if (this.hostPresent && !this.hostDisconnectTimer) {
               console.log('[Supabase Client] Host leave event received, starting 6s grace timer...');
@@ -360,6 +367,14 @@ export class NetworkManager {
     console.log('[Supabase Client] Reconnecting client to room:', this.roomCode);
 
     if (this.channel && this.channel.state === 'joined') {
+      // Re-track presence to ensure server presence table is refreshed
+      this.channel.track({
+        id: this.myPlayerId,
+        name: player.name,
+        isHost: false,
+        onlineAt: Date.now(),
+      }).catch(() => {});
+
       this.sendToHost({
         type: 'JOIN_REQUEST',
         senderId: this.myPlayerId,

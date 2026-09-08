@@ -406,10 +406,11 @@ export function App() {
 
         const state = msg.payload as RoomState;
 
-        // CRITICAL GUARD: If non-host player was removed from the room roster, they were kicked
+        // CRITICAL GUARD: If non-host player was previously in room roster and now removed, they were kicked
         if (!myPlayer.isHost) {
+          const wasInRoom = players.some((p) => p.id === myPlayer.id);
           const isStillInRoom = state.players.some((p) => p.id === myPlayer.id);
-          if (!isStillInRoom) {
+          if (wasInRoom && !isStillInRoom) {
             console.log('[Client] Detected removal from room roster in ROOM_STATE_SYNC');
             cleanupAndExitToWelcome('Bạn đã bị chủ phòng mời ra khỏi phòng.', state.roomCode);
             return;
@@ -687,12 +688,22 @@ export function App() {
       }
     };
 
+    const handleOffline = () => {
+      console.warn('[App] Device went offline.');
+      setConnStatus('ERROR');
+      setErrorMsg('Mất kết nối Internet. Vui lòng kiểm tra lại mạng!');
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('online', handleVisibilityOrFocus);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('online', handleVisibilityOrFocus);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [myPlayer, roomCode, players, config, roundNumber, gameStatus]);
 
