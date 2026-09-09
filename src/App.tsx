@@ -287,9 +287,7 @@ export function App() {
         setPlayers((prev) => {
           // Check if player with same ID or same Name already exists
           const existingIndex = prev.findIndex(
-            (p) =>
-              p.id === incomingPlayer.id ||
-              (!p.isAi && !p.isHost && p.name.trim().toLowerCase() === incomingPlayer.name.trim().toLowerCase() && !p.name.startsWith('Phù thủy #'))
+            (p) => p.id === incomingPlayer.id
           );
 
           let updated: Player[];
@@ -757,7 +755,7 @@ export function App() {
       clearLocalSession();
 
       let effectiveName = localStorage.getItem('hogw_player_name')?.trim();
-      if (!effectiveName) {
+      if (!effectiveName || effectiveName.startsWith('Phù thủy #')) {
         effectiveName = `Phù thủy #${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         try {
           localStorage.setItem('hogw_player_name', effectiveName);
@@ -921,7 +919,7 @@ export function App() {
   // Action: Join Room (Client)
   const handleJoinRoom = async () => {
     let nameToUse = playerName.trim();
-    if (!nameToUse) {
+    if (!nameToUse || nameToUse.startsWith('Phù thủy #')) {
       nameToUse = `Phù thủy #${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       setPlayerName(nameToUse);
     }
