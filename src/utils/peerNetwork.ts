@@ -103,14 +103,21 @@ export class NetworkManager {
       const timeout = setTimeout(() => {
         if (!isSettled) {
           isSettled = true;
-          this.onConnectionStatusChange?.('ERROR', 'Không thể kết nối máy chủ Supabase. Vui lòng kiểm tra lại mạng!');
-          reject(new Error('Host init timeout'));
+          this.onConnectionStatusChange?.('ERROR', 'Không thể tạo phòng. Vui lòng kiểm tra kết nối mạng!');
+          reject(new Error('Timeout connecting to Supabase realtime'));
         }
-      }, 10000);
+      }, 25000);
 
       try {
         if (this.channel) {
           this.supabase.removeChannel(this.channel);
+        }
+        // Force reconnect realtime socket to clear stale connections on mobile devices
+        try {
+          this.supabase.realtime.disconnect();
+          this.supabase.realtime.connect();
+        } catch (e) {
+          console.warn('[Supabase] Failed to force reconnect socket:', e);
         }
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
@@ -207,11 +214,18 @@ export class NetworkManager {
           );
           reject(new Error(`Timeout connecting to room ${this.roomCode}`));
         }
-      }, 15000);
+      }, 25000);
 
       try {
         if (this.channel) {
           this.supabase.removeChannel(this.channel);
+        }
+        // Force reconnect realtime socket to clear stale connections on mobile devices
+        try {
+          this.supabase.realtime.disconnect();
+          this.supabase.realtime.connect();
+        } catch (e) {
+          console.warn('[Supabase] Failed to force reconnect socket:', e);
         }
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
