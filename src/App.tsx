@@ -1216,12 +1216,22 @@ export function App() {
     if (!myPlayer?.isHost) return;
 
     // Clean up any confirmed ghost players whose presence dropped in lobby
+    let presentIds: Set<string> | null = null;
+    if (netRef.current) {
+      presentIds = new Set(netRef.current.getPresentPlayerIds());
+    }
+    
     const activePlayers = players.filter((p) => {
       if (p.isAi || p.isHost) return true;
-      if (lobbyDisconnectTimersRef.current.has(p.id) && !netRef.current?.isPlayerInPresence(p.id)) {
-        console.log(`[Host] Evicting ghost player before game start: ${p.name}`);
-        clearTimeout(lobbyDisconnectTimersRef.current.get(p.id));
-        lobbyDisconnectTimersRef.current.delete(p.id);
+      
+      // If we know exactly who is present via Supabase, forcefully evict those who aren't.
+      // This catches "silent drops" (Airplane mode) where Supabase never emitted a 'leave' event yet.
+      if (presentIds && !presentIds.has(p.id)) {
+        console.log(`[Host] Evicting offline ghost player before game start: ${p.name}`);
+        if (lobbyDisconnectTimersRef.current.has(p.id)) {
+          clearTimeout(lobbyDisconnectTimersRef.current.get(p.id));
+          lobbyDisconnectTimersRef.current.delete(p.id);
+        }
         return false;
       }
       return true;
@@ -1354,7 +1364,20 @@ export function App() {
   // Action: Return to lobby
   const handleBackToLobby = () => {
     if (!myPlayer?.isHost) return;
+    
+    // Clean up offline ghost players when transitioning back to Lobby
+    let cleanPlayers = players;
+    if (netRef.current) {
+      const presentIds = new Set(netRef.current.getPresentPlayerIds());
+      cleanPlayers = players.filter(p => p.id === myPlayer.id || presentIds.has(p.id));
+      if (cleanPlayers.length !== players.length) {
+        console.log('[Host] Evicted ghost players during transition back to Lobby.');
+      }
+    }
+    
     setGameStatus('LOBBY');
+    setPlayers(cleanPlayers);
+    
     if (myPlayer) {
       saveLocalSession({
         roomCode,
@@ -1368,7 +1391,7 @@ export function App() {
         roomCode,
         hostId: myPlayer.id,
         status: 'LOBBY',
-        players,
+        players: cleanPlayers,
         config,
         roundNumber,
       });
