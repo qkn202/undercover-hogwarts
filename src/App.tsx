@@ -1725,6 +1725,17 @@ export function App() {
                 <span className="text-[#ffd875] font-bold border-b border-[#ffd875]/40 pb-0.5">Học Sinh Hogwarts</span>{' '}
                 và <span className="text-red-400 font-bold border-b border-red-500/40 pb-0.5">Tử Thần Thực Tử</span>.
               </p>
+
+              <div className="flex items-center justify-center mt-3">
+                <button
+                  type="button"
+                  onClick={() => openFlooDrawer()}
+                  className="px-4 py-2 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] hover:from-[#941c14] hover:to-[#b32317] text-[#ffd875] border border-[#ffd875]/70 flex items-center gap-2 font-cinzel font-black text-xs tracking-wider shadow-[0_4px_20px_rgba(116,0,1,0.5)] transition-all active:scale-95 cursor-pointer"
+                >
+                  <Flame size={16} className="text-[#ffd875] animate-pulse" />
+                  <span>MẠNG FLOO (CHAT THỜI GIAN THỰC)</span>
+                </button>
+              </div>
             </div>
 
             {/* Wizard Persona Studio Component */}
@@ -2298,17 +2309,16 @@ export function App() {
         </div>
       )}
 
-      {/* Floating Floo Chat Trigger when in Game/Lobby */}
-      {gameStatus !== 'WELCOME' && (
-        <button
-          onClick={() => openFlooDrawer()}
-          className="fixed bottom-4 right-4 z-40 px-3.5 py-2 rounded-full bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] hover:from-[#941c14] hover:to-[#b32317] text-[#ffd875] border border-[#ffd875]/70 flex items-center gap-1.5 text-xs font-serif font-bold cursor-pointer transition-all active:scale-95 shadow-[0_4px_20px_rgba(116,0,1,0.6)]"
-          title="Mở Mạng Floo (Chat HPVN)"
-        >
-          <Flame size={15} className="text-[#ffd875] animate-pulse" />
-          <span className="hidden sm:inline">Mạng Floo</span>
-        </button>
-      )}
+      {/* Floating Floo Chat Trigger - Always accessible */}
+      <button
+        type="button"
+        onClick={() => openFlooDrawer()}
+        className="fixed bottom-4 right-4 z-40 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] hover:from-[#941c14] hover:to-[#b32317] text-[#ffd875] border border-[#ffd875]/80 flex items-center gap-1.5 text-xs font-serif font-bold cursor-pointer transition-all active:scale-95 shadow-[0_4px_25px_rgba(116,0,1,0.7)]"
+        title="Mở Mạng Floo (Chat HPVN)"
+      >
+        <Flame size={16} className="text-[#ffd875] animate-pulse" />
+        <span className="hidden sm:inline">Mạng Floo</span>
+      </button>
 
       {/* Embedded Mạng Floo Slide-out Drawer */}
       <FlooChatDrawer />

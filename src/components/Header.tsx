@@ -186,6 +186,15 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Mobile Menu & Sound controls */}
         <div className="flex md:hidden items-center gap-1.5 shrink-0">
           <button
+            onClick={() => openFlooDrawer()}
+            title="Mạng Floo - Trò chuyện HPVN"
+            className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#740001] to-[#8e1d13] text-[#ffd875] border border-[#ffd875]/60 flex items-center gap-1 text-[11px] font-serif font-bold active:scale-95 cursor-pointer shadow-sm"
+          >
+            <Flame size={14} className="text-[#ffd875] animate-pulse" />
+            <span>Floo</span>
+          </button>
+
+          <button
             onClick={handleToggleSound}
             title={soundOn ? 'Tắt âm' : 'Bật âm'}
             className="p-2 rounded-xl bg-[#1b0f2e] text-[#c8aa6e] hover:text-[#ffd875] border border-[#c8aa6e]/30 transition-all active:scale-95"

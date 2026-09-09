@@ -19,8 +19,10 @@ import {
   Crown,
   Sparkles,
   ArrowRight,
+  Flame,
 } from 'lucide-react';
 import { sound } from '../utils/audio';
+import { openFlooDrawer } from './FlooChatDrawer';
 
 interface LobbyProps {
   roomCode: string;
@@ -237,6 +239,15 @@ export const Lobby: React.FC<LobbyProps> = ({
               >
                 <QrCode size={16} />
                 <span>Mã QR</span>
+              </button>
+
+              <button
+                onClick={() => openFlooDrawer()}
+                className="px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#740001] to-[#8e1d13] text-[#ffd875] border border-[#ffd875]/60 hover:border-[#ffd875] transition-all flex items-center gap-1.5 text-xs font-serif font-bold cursor-pointer shadow-md active:scale-95"
+                title="Mở Mạng Floo (Chat HPVN)"
+              >
+                <Flame size={16} className="text-[#ffd875] animate-pulse" />
+                <span>Mạng Floo</span>
               </button>
             </div>
           </div>
