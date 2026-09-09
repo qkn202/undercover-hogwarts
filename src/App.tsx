@@ -613,7 +613,7 @@ export function App() {
         // Only auto-evict if we are in LOBBY (phòng chờ). In PLAYING mode, positions and cards are preserved.
         if (myPlayer?.isHost && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME')) {
           if (!lobbyDisconnectTimersRef.current.has(playerId)) {
-            console.log(`[Host] Scheduling auto-removal of ghost player ${playerId} from lobby in 10s if not returned...`);
+            console.log(`[Host] Scheduling auto-removal of ghost player ${playerId} from lobby in 60s if not returned...`);
             const timer = setTimeout(() => {
               lobbyDisconnectTimersRef.current.delete(playerId);
               setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
@@ -637,7 +637,7 @@ export function App() {
                   return updated;
                 });
               }
-            }, 10000);
+            }, 60000);
 
             lobbyDisconnectTimersRef.current.set(playerId, timer);
             setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
