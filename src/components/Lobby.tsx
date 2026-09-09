@@ -176,7 +176,11 @@ export const Lobby: React.FC<LobbyProps> = ({
           {isEditingName ? (
             <span className="text-amber-300 font-medium">Nhấn Enter hoặc nút ✔ để lưu</span>
           ) : (
-            <span className="text-stone-400">Bạn có thể đổi tên trực tiếp bất cứ lúc nào</span>
+            <span className={myPlayer.name.startsWith('Phù thủy #') ? "text-amber-400 font-bold" : "text-stone-400"}>
+              {myPlayer.name.startsWith('Phù thủy #') 
+                ? "Bạn phải đổi tên để thấy danh sách người chơi"
+                : "Bạn có thể đổi tên trực tiếp bất cứ lúc nào"}
+            </span>
           )}
         </div>
       </div>
@@ -434,7 +438,18 @@ export const Lobby: React.FC<LobbyProps> = ({
       )}
 
       {/* Player Roster */}
-      <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/30 shadow-md">
+      {myPlayer.name.startsWith('Phù thủy #') ? (
+        <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/30 shadow-md text-center animate-pulse">
+          <div className="text-3xl mb-2">👁️</div>
+          <h3 className="font-serif font-bold text-[#ffd875] text-lg mb-1">
+            Bạn phải đổi tên để thấy danh sách người chơi
+          </h3>
+          <p className="text-sm text-stone-400">
+            Hãy cuộn lên phần <strong>TÊN CỦA BẠN TRONG PHÒNG</strong> ở trên cùng để đặt một cái tên thú vị nhé!
+          </p>
+        </div>
+      ) : (
+        <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/30 shadow-md">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-[#c8aa6e]" />
@@ -534,6 +549,7 @@ export const Lobby: React.FC<LobbyProps> = ({
           })}
         </div>
       </div>
+      )}
 
       {/* Start Game Action Button (Host) or Waiting Status (Client) */}
       {isHost ? (
