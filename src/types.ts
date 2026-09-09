@@ -46,6 +46,8 @@ export interface RoomState {
   config: RoomConfig;
   currentPair?: WordPair;
   roundNumber: number;
+  currentSpeakerId?: string;
+  winner?: 'STUDENT' | 'DEATH_EATER' | 'MR_WHITE' | null;
 }
 
 // Peer Message Types for P2P Communication
@@ -61,6 +63,9 @@ export type PeerMessageType =
   | 'ROOM_CLOSED'
   | 'HOST_DISCONNECTED'
   | 'HOST_RECONNECTED'
+  | 'UPDATE_SPEAKER_TURN'
+  | 'MR_WHITE_GUESS'
+  | 'GAME_OVER'
   | 'PING'
   | 'PONG';
 

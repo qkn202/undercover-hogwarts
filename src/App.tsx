@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Player, RoomConfig, RoomState, WordPair, GameStatus, PeerMessage } from './types';
+import type { Player, RoomConfig, RoomState, WordPair, GameStatus, PeerMessage, HostRoleMode } from './types';
 import { Header } from './components/Header';
 import { Lobby } from './components/Lobby';
 import { SecretCard } from './components/SecretCard';
@@ -13,7 +13,28 @@ import { selectRandomWordPair } from './data/words';
 import { assignOptimalRoles, type PlayerRoleStats } from './utils/roleAssignment';
 import { createAiPlayer } from './data/aiBots';
 import { sound } from './utils/audio';
+import { DetectiveNotepad } from './components/DetectiveNotepad';
+import confetti from 'canvas-confetti';
 import { Crown, LogIn, AlertCircle, LogOut } from 'lucide-react';
+
+function evaluateWinCondition(
+  players: Player[],
+  hostRole: HostRoleMode
+): 'STUDENT' | 'DEATH_EATER' | null {
+  const activePlaying = players.filter(
+    (p) => !(p.isHost && hostRole === 'GAME_MASTER') && !p.isEliminated && p.role
+  );
+  const students = activePlaying.filter((p) => p.role === 'STUDENT');
+  const enemies = activePlaying.filter((p) => p.role === 'DEATH_EATER' || p.role === 'MR_WHITE');
+
+  if (enemies.length === 0 && students.length > 0) {
+    return 'STUDENT';
+  }
+  if (enemies.length >= students.length && enemies.length > 0) {
+    return 'DEATH_EATER';
+  }
+  return null;
+}
 
 const INITIAL_CONFIG: RoomConfig = {
   hostRole: 'PLAYER',
@@ -142,6 +163,17 @@ export function App() {
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isCustomWordsOpen, setIsCustomWordsOpen] = useState(false);
   const [isPassAndPlayOpen, setIsPassAndPlayOpen] = useState(false);
+
+  // Turn Spotlight, Win Condition & Mr. White Last Guess
+  const [currentSpeakerId, setCurrentSpeakerId] = useState<string | undefined>();
+  const [winner, setWinner] = useState<'STUDENT' | 'DEATH_EATER' | 'MR_WHITE' | null>(null);
+  const [mrWhiteGuessInput, setMrWhiteGuessInput] = useState('');
+  const [mrWhiteHasGuessed, setMrWhiteHasGuessed] = useState(false);
+  const [hostMrWhitePrompt, setHostMrWhitePrompt] = useState<{
+    playerId: string;
+    playerName: string;
+    guess: string;
+  } | null>(null);
 
   // Network Manager Ref
   const netRef = useRef<NetworkManager | null>(null);
@@ -438,6 +470,12 @@ export function App() {
         if (state.currentPair) {
           setCurrentPair(state.currentPair);
         }
+        if (state.currentSpeakerId !== undefined) {
+          setCurrentSpeakerId(state.currentSpeakerId);
+        }
+        if (state.winner !== undefined) {
+          setWinner(state.winner);
+        }
 
         // Sync player's own speakingOrder if received in state.players
         if (myPlayer) {
@@ -486,6 +524,29 @@ export function App() {
           } else {
             sound.playMagicCardFlip();
           }
+        }
+        break;
+      }
+
+      case 'UPDATE_SPEAKER_TURN': {
+        const { speakerId } = msg.payload || {};
+        if (speakerId) {
+          setCurrentSpeakerId(speakerId);
+        }
+        break;
+      }
+
+      case 'MR_WHITE_GUESS': {
+        if (!myPlayer?.isHost) return;
+        const { playerId, guess } = msg.payload || {};
+        const guessingPlayer = players.find((p) => p.id === playerId);
+        if (guessingPlayer && guess) {
+          setHostMrWhitePrompt({
+            playerId,
+            playerName: guessingPlayer.name,
+            guess: String(guess).trim(),
+          });
+          sound.playDarkReveal();
         }
         break;
       }
@@ -1312,6 +1373,13 @@ export function App() {
 
     setPlayers(assignedPlayers);
 
+    const firstSpeaker = assignedPlayers.find((p) => p.speakingOrder === 1) || assignedPlayers[0];
+    const initialSpeakerId = firstSpeaker?.id;
+    setCurrentSpeakerId(initialSpeakerId);
+    setWinner(null);
+    setMrWhiteHasGuessed(false);
+    setHostMrWhitePrompt(null);
+
     // Update host's own player card
     const hostUpdated = assignedPlayers.find((p) => p.id === myPlayer.id);
     if (hostUpdated) {
@@ -1335,6 +1403,8 @@ export function App() {
         players: assignedPlayers,
         config,
         roundNumber,
+        currentSpeakerId: initialSpeakerId,
+        winner: null,
       });
     }
 
@@ -1408,6 +1478,19 @@ export function App() {
       p.id === playerId ? { ...p, isEliminated: !p.isEliminated } : p
     );
     setPlayers(updated);
+
+    const detectedWinner = evaluateWinCondition(updated, config.hostRole);
+    setWinner(detectedWinner);
+
+    if (detectedWinner) {
+      if (detectedWinner === 'STUDENT') {
+        sound.playVictoryFanfare();
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+      } else {
+        sound.playDarkReveal();
+      }
+    }
+
     if (netRef.current) {
       netRef.current.broadcastRoomState({
         roomCode,
@@ -1416,7 +1499,17 @@ export function App() {
         players: updated,
         config,
         roundNumber,
+        currentSpeakerId,
+        winner: detectedWinner,
       });
+    }
+  };
+
+  const handleUpdateSpeaker = (speakerId: string) => {
+    setCurrentSpeakerId(speakerId);
+    sound.playButtonChime();
+    if (netRef.current) {
+      netRef.current.broadcastSpeakerTurn(speakerId);
     }
   };
 
@@ -1639,13 +1732,18 @@ export function App() {
               </div>
             ) : (
               /* Player's Secret Card (Normal player OR Host playing) */
-              <SecretCard
-                role={myPlayer.role}
-                word={myPlayer.word}
-                playerName={myPlayer.name}
-                roundNumber={roundNumber}
-                speakingOrder={myPlayer.speakingOrder}
-              />
+              <>
+                <SecretCard
+                  role={myPlayer.role}
+                  word={myPlayer.word}
+                  playerName={myPlayer.name}
+                  roundNumber={roundNumber}
+                  speakingOrder={myPlayer.speakingOrder}
+                />
+                {gameStatus === 'PLAYING' && (
+                  <DetectiveNotepad players={players} myPlayerId={myPlayer.id} />
+                )}
+              </>
             )}
 
             {/* Speaking Turn Order Roster during PLAYING phase */}
@@ -1653,6 +1751,10 @@ export function App() {
               <SpeakingOrderBanner
                 players={players}
                 myPlayerId={myPlayer.id}
+                roundNumber={roundNumber}
+                currentSpeakerId={currentSpeakerId}
+                onUpdateSpeaker={handleUpdateSpeaker}
+                isHost={myPlayer.isHost}
               />
             )}
 
@@ -1664,6 +1766,7 @@ export function App() {
                 currentPair={currentPair}
                 players={players}
                 roundNumber={roundNumber}
+                winner={winner}
                 onRevealAll={handleRevealAll}
                 onNextRound={handleNextRound}
                 onBackToLobby={handleBackToLobby}
@@ -1672,18 +1775,48 @@ export function App() {
             ) : (
               gameStatus === 'REVEALED' && (
                 <div className="w-full max-w-md bg-gradient-to-b from-[#1f142e] via-[#160d23] to-[#10081a] p-5 sm:p-6 rounded-2xl border-2 border-[#ffd875]/60 text-center animate-fadeIn shadow-2xl flex flex-col items-center gap-4">
-                  {/* Header */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-purple-900/40 border border-[#ffd875]/40 flex items-center justify-center text-3xl mb-2 shadow-inner">
-                      🏆
+                  {/* Victory Banner */}
+                  {winner ? (
+                    <div
+                      className={`w-full p-4 rounded-2xl border-2 text-center shadow-xl flex flex-col items-center gap-1.5 animate-bounce ${
+                        winner === 'STUDENT'
+                          ? 'bg-gradient-to-r from-amber-950 via-amber-900 to-amber-950 border-amber-400 text-amber-200'
+                          : winner === 'DEATH_EATER'
+                          ? 'bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-emerald-400 text-emerald-200'
+                          : 'bg-gradient-to-r from-purple-950 via-purple-900 to-purple-950 border-purple-400 text-purple-200'
+                      }`}
+                    >
+                      <span className="text-3xl">
+                        {winner === 'STUDENT' ? '⚡ 🏆' : winner === 'DEATH_EATER' ? '🐍 💀' : '👻 🔮'}
+                      </span>
+                      <h3 className="font-serif font-black text-xl sm:text-2xl tracking-wide">
+                        {winner === 'STUDENT'
+                          ? 'PHE HỌC SINH CHIẾN THẮNG!'
+                          : winner === 'DEATH_EATER'
+                          ? 'TỬ THẦN THỰC TỬ THẮNG CUỘC!'
+                          : 'KẺ KHÔNG TÊN LẬT KÈO CHIẾN THẮNG!'}
+                      </h3>
+                      <p className="text-xs opacity-90 max-w-sm leading-relaxed">
+                        {winner === 'STUDENT'
+                          ? 'Các phù thủy chân chính đã loại sạch Tử Thần và bảo vệ Hogwarts!'
+                          : winner === 'DEATH_EATER'
+                          ? 'Tử Thần Thực Tử đã ẩn mình hoàn hảo và áp đảo toàn trường!'
+                          : 'Mr. White đã giải mã chính xác từ ngữ ma thuật của phe Học Sinh!'}
+                      </p>
                     </div>
-                    <h4 className="font-serif font-bold text-xl sm:text-2xl text-[#f3d994] tracking-wide">
-                      Ván Đấu Đã Kết Thúc!
-                    </h4>
-                    <p className="text-xs text-stone-300 mt-1">
-                      Quản trò đã mở toàn bộ kết quả vòng đấu #{roundNumber}
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-purple-900/40 border border-[#ffd875]/40 flex items-center justify-center text-3xl mb-2 shadow-inner">
+                        🏆
+                      </div>
+                      <h4 className="font-serif font-bold text-xl sm:text-2xl text-[#f3d994] tracking-wide">
+                        Ván Đấu Đã Kết Thúc!
+                      </h4>
+                      <p className="text-xs text-stone-300 mt-1">
+                        Quản trò đã mở toàn bộ kết quả vòng đấu #{roundNumber}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Revealed Word Pair */}
                   {currentPair && (
@@ -1804,6 +1937,148 @@ export function App() {
       <HowToPlayModal isOpen={isHowToPlayOpen} onClose={() => setIsHowToPlayOpen(false)} />
       <CustomWordModal isOpen={isCustomWordsOpen} onClose={() => setIsCustomWordsOpen(false)} />
       <PassAndPlayModal isOpen={isPassAndPlayOpen} onClose={() => setIsPassAndPlayOpen(false)} />
+
+      {/* Mr. White Last Chance Guess Modal (For Eliminated Mr. White) */}
+      {myPlayer?.role === 'MR_WHITE' && myPlayer.isEliminated && gameStatus === 'PLAYING' && !mrWhiteHasGuessed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#2a133d] via-[#1c0d2b] to-[#12071c] border-2 border-purple-500 rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden">
+            <div className="w-16 h-16 rounded-full bg-purple-950/80 border-2 border-purple-400 shadow-lg flex items-center justify-center text-3xl mx-auto mb-3 animate-pulse">
+              👻
+            </div>
+            <span className="text-[10px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
+              BẠN ĐÃ BỊ LOẠI KHỎI BÀN CHƠI!
+            </span>
+            <h3 className="font-serif font-black text-xl sm:text-2xl text-purple-200 tracking-wide mt-1 mb-2">
+              CƠ HỘI LẬT KÈO CUỐI CÙNG
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed mb-4">
+              Bạn là <strong>Kẻ Không Tên (Mr. White)</strong>! Hãy đoán từ bí mật của phe Học Sinh. Nếu đoán đúng, bạn sẽ <strong>LẬT KÈO CHIẾN THẮNG MỘT MÌNH</strong>!
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (mrWhiteGuessInput.trim()) {
+                  setMrWhiteHasGuessed(true);
+                  netRef.current?.sendMrWhiteGuess(mrWhiteGuessInput.trim());
+                  sound.playMagicCardFlip();
+                }
+              }}
+              className="flex flex-col gap-3"
+            >
+              <input
+                type="text"
+                value={mrWhiteGuessInput}
+                onChange={(e) => setMrWhiteGuessInput(e.target.value)}
+                maxLength={30}
+                autoFocus
+                placeholder="Nhập từ của Học sinh bạn đoán..."
+                className="w-full px-4 py-3 rounded-xl bg-[#0d0714] border-2 border-purple-400 text-sm font-serif font-bold text-purple-200 text-center placeholder:text-stone-600 focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-inner"
+              />
+
+              <button
+                type="submit"
+                disabled={!mrWhiteGuessInput.trim()}
+                className="w-full mt-1 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:to-purple-400 text-white font-serif font-bold text-sm tracking-wider shadow-lg transition active:scale-98 disabled:opacity-40 cursor-pointer"
+              >
+                🔮 GỬI ĐÁP ÁN ĐOÁN LẬT KÈO
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Host Modal to judge Mr. White's Guess */}
+      {myPlayer?.isHost && hostMrWhitePrompt && currentPair && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#251838] via-[#1a1028] to-[#120a1c] border-2 border-[#ffd875] rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden">
+            <div className="w-16 h-16 rounded-full bg-purple-950/80 border-2 border-purple-400 shadow-lg flex items-center justify-center text-3xl mx-auto mb-3 animate-pulse">
+              👻
+            </div>
+            <span className="text-[10px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
+              PHÁN QUYẾT CỦA TRỌNG TÀI
+            </span>
+            <h3 className="font-serif font-black text-xl text-[#ffd875] tracking-wide mt-1 mb-2">
+              KẺ KHÔNG TÊN ĐOÁN TỪ!
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed mb-3">
+              Phù thủy <strong className="text-purple-300 font-bold">{hostMrWhitePrompt.playerName}</strong> đã gửi đáp án đoán từ của phe Học Sinh:
+            </p>
+
+            <div className="bg-[#0e0814] p-3.5 rounded-xl border border-purple-500/50 my-2 text-left">
+              <span className="text-[10px] text-stone-400 uppercase font-semibold block mb-0.5">
+                Từ Mr. White đoán:
+              </span>
+              <span className="font-serif font-black text-lg text-purple-300 block">
+                "{hostMrWhitePrompt.guess}"
+              </span>
+              <span className="text-[10px] text-amber-400 uppercase font-semibold block mt-2 mb-0.5">
+                Từ đúng của Học sinh:
+              </span>
+              <span className="font-serif font-bold text-base text-[#ffd875] block">
+                "{currentPair.studentWord}"
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playVictoryFanfare();
+                  confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
+                  setWinner('MR_WHITE');
+                  setGameStatus('REVEALED');
+                  if (netRef.current) {
+                    netRef.current.broadcastRoomState({
+                      roomCode,
+                      hostId: myPlayer.id,
+                      status: 'REVEALED',
+                      players,
+                      config,
+                      roundNumber,
+                      currentSpeakerId,
+                      winner: 'MR_WHITE',
+                    });
+                    netRef.current.revealAll(currentPair, players);
+                  }
+                  setHostMrWhitePrompt(null);
+                }}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-serif font-bold text-xs tracking-wider shadow-lg transition active:scale-95 cursor-pointer"
+              >
+                ✔ ĐOÁN ĐÚNG (MR. WHITE THẮNG)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playDarkReveal();
+                  setHostMrWhitePrompt(null);
+                  // Check if students win after Mr. White failed
+                  const win = evaluateWinCondition(players, config.hostRole);
+                  if (win) {
+                    setWinner(win);
+                    if (netRef.current) {
+                      netRef.current.broadcastRoomState({
+                        roomCode,
+                        hostId: myPlayer.id,
+                        status: gameStatus as GameStatus,
+                        players,
+                        config,
+                        roundNumber,
+                        currentSpeakerId,
+                        winner: win,
+                      });
+                    }
+                  }
+                }}
+                className="flex-1 py-3 rounded-xl bg-[#2a1b3d] hover:bg-[#3d2757] text-stone-300 hover:text-white font-serif font-bold text-xs border border-stone-700 transition active:scale-95 cursor-pointer"
+              >
+                ✕ ĐOÁN SAI (TIẾP TỤC)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

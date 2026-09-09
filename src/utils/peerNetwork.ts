@@ -531,6 +531,22 @@ export class NetworkManager {
     });
   }
 
+  public broadcastSpeakerTurn(speakerId: string): void {
+    this.broadcast({
+      type: 'UPDATE_SPEAKER_TURN',
+      senderId: this.myPlayerId,
+      payload: { speakerId },
+    });
+  }
+
+  public sendMrWhiteGuess(guess: string): void {
+    this.sendToHost({
+      type: 'MR_WHITE_GUESS',
+      senderId: this.myPlayerId,
+      payload: { playerId: this.myPlayerId, guess },
+    });
+  }
+
   public sendToHost(msg: PeerMessage): void {
     this.broadcast(msg);
   }

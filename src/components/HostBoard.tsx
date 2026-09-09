@@ -10,6 +10,7 @@ interface HostBoardProps {
   currentPair?: WordPair;
   players: Player[];
   roundNumber: number;
+  winner?: 'STUDENT' | 'DEATH_EATER' | 'MR_WHITE' | null;
   onRevealAll: () => void;
   onNextRound: () => void;
   onBackToLobby: () => void;
@@ -22,6 +23,7 @@ export const HostBoard: React.FC<HostBoardProps> = ({
   currentPair,
   players,
   roundNumber,
+  winner,
   onRevealAll,
   onNextRound,
   onBackToLobby,
@@ -66,6 +68,45 @@ export const HostBoard: React.FC<HostBoardProps> = ({
 
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 mt-6">
+      {/* Game Outcome Alert Banner for Host */}
+      {winner && (
+        <div
+          className={`p-4 rounded-2xl border-2 text-center shadow-xl flex flex-col items-center gap-1.5 animate-fadeIn ${
+            winner === 'STUDENT'
+              ? 'bg-gradient-to-r from-amber-950/90 via-amber-900/80 to-amber-950/90 border-amber-400 text-amber-200'
+              : winner === 'DEATH_EATER'
+              ? 'bg-gradient-to-r from-emerald-950/90 via-emerald-900/80 to-emerald-950/90 border-emerald-400 text-emerald-200'
+              : 'bg-gradient-to-r from-purple-950/90 via-purple-900/80 to-purple-950/90 border-purple-400 text-purple-200'
+          }`}
+        >
+          <span className="text-3xl animate-bounce">
+            {winner === 'STUDENT' ? '⚡ 🏆' : winner === 'DEATH_EATER' ? '🐍 💀' : '👻 🔮'}
+          </span>
+          <h4 className="font-serif font-black text-base sm:text-lg tracking-wider">
+            {winner === 'STUDENT'
+              ? 'PHE HỌC SINH ĐÃ CHIẾN THẮNG!'
+              : winner === 'DEATH_EATER'
+              ? 'TỬ THẦN THỰC TỬ ĐÃ THỐNG TRỊ HOGWARTS!'
+              : 'KẺ KHÔNG TÊN ĐÃ ĐOÁN ĐÚNG TỪ & LẬT KÈO!'}
+          </h4>
+          <p className="text-xs opacity-90 max-w-md leading-relaxed">
+            {winner === 'STUDENT'
+              ? 'Tất cả Tử Thần Thực Tử và Kẻ Không Tên đã bị loại khỏi bàn chơi.'
+              : winner === 'DEATH_EATER'
+              ? 'Số lượng Tử thần và Kẻ không tên đã ngang bằng hoặc áp đảo Học sinh còn sống!'
+              : 'Mr. White đã thành công giải mã từ ngữ bí mật của phe Học sinh!'}
+          </p>
+          {status === 'PLAYING' && (
+            <button
+              onClick={handleReveal}
+              className="mt-1 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-serif font-black text-xs shadow-lg transition active:scale-95 cursor-pointer"
+            >
+              BẤM ĐỂ CÔNG BỐ KẾT QUẢ CHO CẢ PHÒNG ➔
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Host Control Bar */}
       <div className="bg-[#191124] rounded-2xl p-4 border border-[#c8aa6e]/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">

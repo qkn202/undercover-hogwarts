@@ -38,6 +38,25 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [showQr, setShowQr] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newNameInput, setNewNameInput] = useState('');
+  const [acceptanceInput, setAcceptanceInput] = useState('');
+  const [showAcceptanceModal, setShowAcceptanceModal] = useState(
+    myPlayer?.name?.startsWith('Phù thủy #') ?? false
+  );
+
+  React.useEffect(() => {
+    if (myPlayer?.name?.startsWith('Phù thủy #')) {
+      setShowAcceptanceModal(true);
+    }
+  }, [myPlayer?.name]);
+
+  const handleAcceptanceSubmit = (customName?: string) => {
+    const chosen = (customName || acceptanceInput).trim().slice(0, 20);
+    if (chosen) {
+      onRenamePlayer?.(chosen);
+      sound.playMagicCardFlip();
+      setShowAcceptanceModal(false);
+    }
+  };
 
   const handleStartEditing = () => {
     setNewNameInput(myPlayer?.name || '');
@@ -439,14 +458,26 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       {/* Player Roster */}
       {myPlayer.name.startsWith('Phù thủy #') ? (
-        <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/30 shadow-md text-center animate-pulse">
-          <div className="text-3xl mb-2">👁️</div>
-          <h3 className="font-serif font-bold text-[#ffd875] text-lg mb-1">
-            Bạn phải đổi tên để thấy danh sách người chơi
+        <div className="bg-[#181122]/90 rounded-2xl p-6 border-2 border-[#ffd875]/50 shadow-xl text-center animate-fadeIn flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8a1c14] to-[#450a0a] border-2 border-[#ffd875] shadow-lg flex items-center justify-center text-3xl animate-bounce">
+            ✉️
+          </div>
+          <h3 className="font-serif font-black text-[#ffd875] text-lg sm:text-xl">
+            Thư Mời Nhập Học Đang Chờ Bạn!
           </h3>
-          <p className="text-sm text-stone-400">
-            Hãy cuộn lên phần <strong>TÊN CỦA BẠN TRONG PHÒNG</strong> ở trên cùng để đặt một cái tên thú vị nhé!
+          <p className="text-xs sm:text-sm text-stone-300 max-w-sm leading-relaxed">
+            Bạn cần khắc tên phù thủy của mình lên đũa phép để bước vào Đại Sảnh Đường và thấy danh sách các phù thủy khác.
           </p>
+          <button
+            onClick={() => {
+              setShowAcceptanceModal(true);
+              sound.playButtonChime();
+            }}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-serif font-black text-xs sm:text-sm tracking-wider shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-2"
+          >
+            <span>📜</span>
+            <span>Mở Thư Nhập Học Để Đổi Tên</span>
+          </button>
         </div>
       ) : (
         <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/30 shadow-md">
@@ -585,6 +616,77 @@ export const Lobby: React.FC<LobbyProps> = ({
               <span>Rời Phòng</span>
             </button>
           )}
+        </div>
+      )}
+      {/* Hogwarts Acceptance Letter Modal */}
+      {showAcceptanceModal && myPlayer.name.startsWith('Phù thủy #') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#241738] via-[#1c112b] to-[#120a1c] border-2 border-[#ffd875] rounded-3xl p-6 sm:p-7 shadow-2xl shadow-amber-500/20 text-center relative overflow-hidden">
+            {/* Background crest watermark */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex items-center justify-center">
+              <span className="text-[180px]">⚡</span>
+            </div>
+
+            {/* Hogwarts Wax Seal */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8a1c14] to-[#450a0a] border-2 border-[#ffd875] shadow-lg flex items-center justify-center text-3xl mx-auto mb-3 shadow-amber-500/20 animate-pulse">
+              📜
+            </div>
+
+            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block font-mono">
+              HỌC VIỆN PHÙ THỦY & PHÁP SƯ HOGWARTS
+            </span>
+            <h3 className="font-serif font-black text-xl sm:text-2xl text-[#ffd875] tracking-wide mt-1 mb-2">
+              THƯ MỜI NHẬP HỌC
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed mb-4">
+              Chào mừng bạn đến với Đại Sảnh Đường! Hãy khắc <strong>danh xưng phù thủy</strong> của bạn để chính thức gia nhập bàn chơi:
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAcceptanceSubmit();
+              }}
+              className="flex flex-col gap-3 relative z-10"
+            >
+              <input
+                type="text"
+                value={acceptanceInput}
+                onChange={(e) => setAcceptanceInput(e.target.value)}
+                maxLength={20}
+                autoFocus
+                placeholder="Ví dụ: Harry, Hermione, Khang..."
+                className="w-full px-4 py-3 rounded-xl bg-[#0f0917] border-2 border-[#ffd875]/70 text-sm font-serif font-bold text-[#ffd875] text-center placeholder:text-stone-600 focus:outline-none focus:ring-2 focus:ring-[#ffd875] shadow-inner"
+              />
+
+              {/* Quick suggestion pills */}
+              <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10px] text-stone-400 font-sans">Gợi ý nhanh:</span>
+                {['Harry', 'Hermione', 'Ron', 'Draco', 'Luna', 'Snape'].map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setAcceptanceInput(name);
+                      sound.playButtonChime();
+                    }}
+                    className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#2a1b3d] hover:bg-[#3d2757] text-amber-200 border border-[#c8aa6e]/30 cursor-pointer transition active:scale-95 font-serif"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="submit"
+                disabled={!acceptanceInput.trim()}
+                className="w-full mt-2 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-serif font-black text-sm tracking-wider shadow-lg transition active:scale-98 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>⚡</span>
+                <span>XÁC NHẬN & BƯỚC VÀO SẢNH</span>
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
