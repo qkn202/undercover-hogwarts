@@ -110,15 +110,15 @@ export class NetworkManager {
 
       try {
         if (this.channel) {
-          this.supabase.removeChannel(this.channel);
+          try { this.supabase.removeChannel(this.channel); } catch {}
+          this.channel = null;
         }
-        // Force reconnect realtime socket to clear stale connections on mobile devices
-        try {
-          this.supabase.realtime.disconnect();
-          this.supabase.realtime.connect();
-        } catch (e) {
-          console.warn('[Supabase] Failed to force reconnect socket:', e);
-        }
+        try { this.supabase.realtime.disconnect(); } catch {}
+        
+        // Completely recreate the Supabase client to ensure a pristine WebSocket connection
+        this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          realtime: { params: { eventsPerSecond: 20 } },
+        });
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
         this.channel = this.supabase.channel(channelName, {
@@ -218,15 +218,15 @@ export class NetworkManager {
 
       try {
         if (this.channel) {
-          this.supabase.removeChannel(this.channel);
+          try { this.supabase.removeChannel(this.channel); } catch {}
+          this.channel = null;
         }
-        // Force reconnect realtime socket to clear stale connections on mobile devices
-        try {
-          this.supabase.realtime.disconnect();
-          this.supabase.realtime.connect();
-        } catch (e) {
-          console.warn('[Supabase] Failed to force reconnect socket:', e);
-        }
+        try { this.supabase.realtime.disconnect(); } catch {}
+        
+        // Completely recreate the Supabase client to ensure a pristine WebSocket connection
+        this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          realtime: { params: { eventsPerSecond: 20 } },
+        });
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
         this.channel = this.supabase.channel(channelName, {
