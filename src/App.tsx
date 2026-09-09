@@ -686,17 +686,17 @@ export function App() {
           }
         }
       } else if (document.visibilityState === 'hidden') {
-        console.log('[App] Tab hidden. Destroying connection to prevent ghosting.');
-        if (netRef.current) {
+        if (netRef.current && myPlayer && !myPlayer.isHost) {
+          console.log('[App] Client tab hidden. Destroying connection to prevent ghosting.');
           // Send explicit leave before destruction just in case
-          if (myPlayer && !myPlayer.isHost) {
-            netRef.current.sendToHost({
-              type: 'PLAYER_LEFT',
-              senderId: myPlayer.id,
-              payload: { playerId: myPlayer.id },
-            });
-          }
+          netRef.current.sendToHost({
+            type: 'PLAYER_LEFT',
+            senderId: myPlayer.id,
+            payload: { playerId: myPlayer.id },
+          });
           netRef.current.destroy();
+        } else if (myPlayer?.isHost) {
+          console.log('[App] Host tab hidden. Keeping connection alive but browser may throttle.');
         }
       }
     };

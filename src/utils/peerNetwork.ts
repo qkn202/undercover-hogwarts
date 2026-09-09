@@ -203,7 +203,7 @@ export class NetworkManager {
           );
           reject(new Error(`Timeout connecting to room ${this.roomCode}`));
         }
-      }, 10000);
+      }, 15000);
 
       try {
         if (this.channel) {
