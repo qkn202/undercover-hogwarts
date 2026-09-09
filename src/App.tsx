@@ -289,7 +289,7 @@ export function App() {
           const existingIndex = prev.findIndex(
             (p) =>
               p.id === incomingPlayer.id ||
-              (!p.isAi && !p.isHost && p.name.trim().toLowerCase() === incomingPlayer.name.trim().toLowerCase())
+              (!p.isAi && !p.isHost && p.name.trim().toLowerCase() === incomingPlayer.name.trim().toLowerCase() && !p.name.startsWith('Phù thủy #'))
           );
 
           let updated: Player[];
@@ -758,7 +758,7 @@ export function App() {
 
       let effectiveName = localStorage.getItem('hogw_player_name')?.trim();
       if (!effectiveName) {
-        effectiveName = `Phù thủy #${Math.floor(100 + Math.random() * 900)}`;
+        effectiveName = `Phù thủy #${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         try {
           localStorage.setItem('hogw_player_name', effectiveName);
         } catch {}
@@ -922,7 +922,7 @@ export function App() {
   const handleJoinRoom = async () => {
     let nameToUse = playerName.trim();
     if (!nameToUse) {
-      nameToUse = `Phù thủy #${Math.floor(100 + Math.random() * 900)}`;
+      nameToUse = `Phù thủy #${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       setPlayerName(nameToUse);
     }
     const code = inputRoomCode.trim().toUpperCase();
