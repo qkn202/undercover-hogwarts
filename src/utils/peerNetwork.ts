@@ -114,12 +114,6 @@ export class NetworkManager {
           try { this.supabase.removeChannel(this.channel); } catch {}
           this.channel = null;
         }
-        try { this.supabase.realtime.disconnect(); } catch {}
-        
-        // Completely recreate the Supabase client to ensure a pristine WebSocket connection
-        this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          realtime: { params: { eventsPerSecond: 20 } },
-        });
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
         this.channel = this.supabase.channel(channelName, {
@@ -227,12 +221,6 @@ export class NetworkManager {
           try { this.supabase.removeChannel(this.channel); } catch {}
           this.channel = null;
         }
-        try { this.supabase.realtime.disconnect(); } catch {}
-        
-        // Completely recreate the Supabase client to ensure a pristine WebSocket connection
-        this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          realtime: { params: { eventsPerSecond: 20 } },
-        });
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
         this.channel = this.supabase.channel(channelName, {
