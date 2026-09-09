@@ -18,6 +18,7 @@ export class NetworkManager {
   public onConnectionStatusChange?: (status: 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR', errorMsg?: string) => void;
   public onPeerJoined?: (peerId: string) => void;
   public onPeerLeft?: (peerId: string, playerId: string) => void;
+  public onPresenceSync?: (presentPlayerIds: string[]) => void;
   public onHostDisconnected?: (disconnectedAt: number) => void;
   public onHostReconnected?: () => void;
 
@@ -137,6 +138,11 @@ export class NetworkManager {
         });
 
         // Track presence to detect join/leave
+        this.channel.on('presence', { event: 'sync' }, () => {
+          console.log('[Supabase Host] Presence state synced.');
+          this.onPresenceSync?.(this.getPresentPlayerIds());
+        });
+
         this.channel.on('presence', { event: 'join' }, (payload: any) => {
           const key = payload?.key;
           if (key && key !== this.myPlayerId) {

@@ -617,41 +617,34 @@ export function App() {
         }
       };
 
-      netRef.current.onPeerLeft = (peerId, playerId) => {
-        console.log('[Host] Peer presence left/dropped:', peerId, playerId);
-        // Only auto-evict if we are in LOBBY (phòng chờ). In PLAYING mode, positions and cards are preserved.
+      netRef.current.onPresenceSync = (presentPlayerIds) => {
         if (myPlayer?.isHost && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME')) {
-          if (!lobbyDisconnectTimersRef.current.has(playerId)) {
-            console.log(`[Host] Scheduling auto-removal of ghost player ${playerId} from lobby in 60s if not returned...`);
-            const timer = setTimeout(() => {
-              lobbyDisconnectTimersRef.current.delete(playerId);
-              setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
-
-              const isStillOnline = netRef.current?.isPlayerInPresence(playerId);
-              if (!isStillOnline) {
-                console.log(`[Host] Auto-evicting confirmed ghost player ${playerId} from waiting lobby.`);
-                setPlayers((prev) => {
-                  const updated = prev.filter((p) => p.id !== playerId);
-                  if (netRef.current) {
-                    const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
-                    netRef.current.broadcastRoomState({
-                      roomCode,
-                      hostId: myPlayer.id,
-                      status: latestStatus as GameStatus,
-                      players: updated,
-                      config,
-                      roundNumber,
-                    });
-                  }
-                  return updated;
+          const presentIds = new Set(presentPlayerIds);
+          setPlayers((prev) => {
+            const updated = prev.filter(p => p.id === myPlayer.id || p.isAi || presentIds.has(p.id));
+            if (updated.length !== prev.length) {
+              console.log('[Host] Proactively evicting offline ghost players via sync event');
+              if (netRef.current) {
+                const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
+                netRef.current.broadcastRoomState({
+                  roomCode,
+                  hostId: myPlayer.id,
+                  status: latestStatus as GameStatus,
+                  players: updated,
+                  config,
+                  roundNumber,
                 });
               }
-            }, 2000); // 2-second grace period for Lobby (fast eviction)
-
-            lobbyDisconnectTimersRef.current.set(playerId, timer);
-            setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
-          }
+            }
+            return updated;
+          });
         }
+      };
+
+      netRef.current.onPeerLeft = (peerId, playerId) => {
+        console.log('[Host] Peer presence left/dropped:', peerId, playerId);
+        // Note: Eviction is now handled instantly and safely by onPresenceSync.
+        // The leave event is just for logging.
       };
     }
   });
