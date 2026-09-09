@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient, type RealtimeChannel } from '@supabase/supabase-js';
 import type { PeerMessage, Player, RoomState, WordPair, Role } from '../types';
+import { saveRoomToDatabase } from '../services/dbSync';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://fxucyrofcsuqtlkukcrx.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_zEiG2Py5kDmGhkTgw0uWIA_We0rOCGu';
@@ -104,7 +105,9 @@ export class NetworkManager {
       const timeout = setTimeout(() => {
         if (!isSettled) {
           isSettled = true;
-          this.onConnectionStatusChange?.('ERROR', 'Đường truyền máy chủ đang gián đoạn. Đang tự động thử lại...');
+          if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+            this.onConnectionStatusChange?.('ERROR', 'Đường truyền máy chủ đang gián đoạn. Đang tự động thử lại...');
+          }
           reject(new Error('Timeout connecting to Supabase realtime'));
         }
       }, 25000);
@@ -203,18 +206,36 @@ export class NetworkManager {
 
     this.onConnectionStatusChange?.('CONNECTING');
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let isSettled = false;
+
+      const confirmHostAndResolve = () => {
+        if (!isSettled) {
+          isSettled = true;
+          clearTimeout(timeout);
+          this.startHeartbeat(false);
+          this.hostPresent = true;
+          this.hostDisconnectedAt = null;
+          this.onHostReconnected?.();
+          this.onConnectionStatusChange?.('CONNECTED');
+          resolve();
+        }
+      };
+
       const timeout = setTimeout(() => {
         if (!isSettled) {
           isSettled = true;
           this.onConnectionStatusChange?.(
             'ERROR',
-            `Không thể kết nối tới phòng "${this.roomCode}". Vui lòng kiểm tra lại mã phòng!`
+            `Không tìm thấy phòng "${this.roomCode}" hoặc Chủ phòng chưa mở sảnh!`
           );
-          reject(new Error(`Timeout connecting to room ${this.roomCode}`));
+          if (this.channel) {
+            try { this.supabase.removeChannel(this.channel); } catch {}
+            this.channel = null;
+          }
+          reject(new Error(`Không tìm thấy phòng "${this.roomCode}". Vui lòng kiểm tra lại mã phòng do Chủ phòng cung cấp!`));
         }
-      }, 25000);
+      }, 4500);
 
       try {
         if (this.channel) {
@@ -234,6 +255,9 @@ export class NetworkManager {
         this.channel.on('broadcast', { event: 'game_message' }, (payload: any) => {
           const msg = payload.payload as PeerMessage;
           if (msg && msg.senderId !== this.myPlayerId) {
+            if (msg.type === 'ROOM_STATE_SYNC' || msg.type === 'HOST_RECONNECTED' || msg.type === 'PONG') {
+              confirmHostAndResolve();
+            }
             this.handleIncomingMessage(msg);
           }
         });
@@ -243,6 +267,7 @@ export class NetworkManager {
           const hostOnline = this.checkIsHostInPresence();
 
           if (hostOnline) {
+            confirmHostAndResolve();
             if (this.hostDisconnectTimer) {
               clearTimeout(this.hostDisconnectTimer);
               this.hostDisconnectTimer = null;
@@ -254,18 +279,18 @@ export class NetworkManager {
               this.onHostReconnected?.();
             }
           } else {
-            // Grace period: do not immediately declare host disconnected on brief tab switches
+            // Grace period: do not immediately declare host disconnected on brief tab switches (allow 3 minutes for phone calls/messaging)
             if (this.hostPresent && !this.hostDisconnectTimer) {
-              console.log('[Supabase Client] Host presence not found in sync, starting 12s grace timer...');
+              console.log('[Supabase Client] Host presence not found in sync, starting 3-minute mobile grace timer...');
               this.hostDisconnectTimer = setTimeout(() => {
                 this.hostDisconnectTimer = null;
                 if (!this.checkIsHostInPresence()) {
-                  console.log('[Supabase Client] Host presence confirmed lost after 12s grace period.');
+                  console.log('[Supabase Client] Host presence confirmed lost after 3-minute grace period.');
                   this.hostPresent = false;
                   this.hostDisconnectedAt = Date.now();
                   this.onHostDisconnected?.(this.hostDisconnectedAt);
                 }
-              }, 12000);
+              }, 180000);
             }
           }
         });
@@ -275,16 +300,16 @@ export class NetworkManager {
           const hostLeft = Array.isArray(leftPresences) && leftPresences.some((p: any) => p?.isHost);
           if (hostLeft) {
             if (this.hostPresent && !this.hostDisconnectTimer) {
-              console.log('[Supabase Client] Host leave event received, starting 12s grace timer...');
+              console.log('[Supabase Client] Host leave event received, starting 3-minute mobile grace timer...');
               this.hostDisconnectTimer = setTimeout(() => {
                 this.hostDisconnectTimer = null;
                 if (!this.checkIsHostInPresence()) {
-                  console.log('[Supabase Client] Host leave confirmed after 12s grace period.');
+                  console.log('[Supabase Client] Host leave confirmed after 3-minute grace period.');
                   this.hostPresent = false;
                   this.hostDisconnectedAt = Date.now();
                   this.onHostDisconnected?.(this.hostDisconnectedAt);
                 }
-              }, 12000);
+              }, 180000);
             }
           }
         });
@@ -292,31 +317,23 @@ export class NetworkManager {
         this.channel.subscribe(async (status) => {
           console.log('[Supabase Client] Channel status:', status);
           if (status === 'SUBSCRIBED') {
-            if (!isSettled) {
-              isSettled = true;
-              clearTimeout(timeout);
+            await this.channel?.track({
+              id: this.myPlayerId,
+              name: player.name,
+              isHost: false,
+              onlineAt: Date.now(),
+            });
 
-              await this.channel?.track({
-                id: this.myPlayerId,
-                name: player.name,
-                isHost: false,
-                onlineAt: Date.now(),
-              });
+            // Send Join Request to Host immediately
+            this.sendToHost({
+              type: 'JOIN_REQUEST',
+              senderId: this.myPlayerId,
+              payload: player,
+            });
 
-              this.startHeartbeat(false);
-              this.hostPresent = true;
-              this.hostDisconnectedAt = null;
-              this.onHostReconnected?.();
-              this.onConnectionStatusChange?.('CONNECTED');
-
-              // Send Join Request to Host immediately
-              this.sendToHost({
-                type: 'JOIN_REQUEST',
-                senderId: this.myPlayerId,
-                payload: player,
-              });
-
-              resolve();
+            // If host presence is already loaded in state, resolve immediately
+            if (this.checkIsHostInPresence()) {
+              confirmHostAndResolve();
             }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             if (!isSettled) {
@@ -344,18 +361,28 @@ export class NetworkManager {
   }
 
   public async reconnectHostIfNeeded(hostPlayer?: Player): Promise<void> {
-    if (!this.channel || this.channel.state !== 'joined' || !this.isSocketHealthy()) {
-      console.log('[Supabase Host] Channel dead or disconnected. Re-subscribing...');
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      // Don't thrash connection while mobile tab is suspended
+      return;
+    }
+
+    if (!this.channel) {
       if (this.roomCode && hostPlayer) {
         try {
           await this.initHost(this.roomCode, hostPlayer);
         } catch (e) {
-          console.warn('[Supabase Host] Failed to re-init host:', e);
+          console.warn('[Supabase Host] Failed to init host:', e);
         }
-      } else if (this.channel) {
-        this.channel.subscribe();
       }
-    } else {
+      return;
+    }
+
+    if (this.channel.state === 'joining') {
+      // In-flight connection: allow Supabase to finish handshake
+      return;
+    }
+
+    if (this.channel.state === 'joined' && this.isSocketHealthy()) {
       if (hostPlayer) {
         this.channel.track({
           id: this.myPlayerId,
@@ -369,14 +396,42 @@ export class NetworkManager {
         senderId: this.myPlayerId,
         payload: { timestamp: Date.now() },
       });
+      return;
+    }
+
+    console.log('[Supabase Host] Channel disconnected. Re-subscribing gently...');
+    try {
+      this.channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          if (hostPlayer) {
+            this.channel?.track({
+              id: this.myPlayerId,
+              name: hostPlayer.name,
+              isHost: true,
+              onlineAt: Date.now(),
+            }).catch(() => {});
+          }
+          this.onConnectionStatusChange?.('CONNECTED');
+        }
+      });
+    } catch {
+      if (this.roomCode && hostPlayer) {
+        this.initHost(this.roomCode, hostPlayer).catch(() => {});
+      }
     }
   }
 
   public async reconnectClient(roomCode: string, player: Player): Promise<boolean> {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return false;
+    }
+
     this.roomCode = roomCode.toUpperCase();
     this.myPlayerId = player.id;
 
-    console.log('[Supabase Client] Reconnecting client to room:', this.roomCode);
+    if (this.channel && this.channel.state === 'joining') {
+      return true;
+    }
 
     if (this.channel && this.channel.state === 'joined') {
       // Re-track presence to ensure server presence table is refreshed
@@ -463,6 +518,9 @@ export class NetworkManager {
    * Host broadcasts public room state to all clients (without secret words of others)
    */
   public broadcastRoomState(state: RoomState): void {
+    // Automatically persist room state to PostgreSQL Database
+    saveRoomToDatabase(state).catch(() => {});
+
     const sanitizedPlayers = state.players.map((p) => {
       if (state.status === 'PLAYING') {
         return {

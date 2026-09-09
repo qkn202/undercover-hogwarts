@@ -73,7 +73,7 @@ export const SpeakingOrderBanner: React.FC<SpeakingOrderBannerProps> = ({
   const canControlTurn = isHost || isMyTurn;
 
   return (
-    <div className="w-full max-w-md mx-auto glass-panel rounded-2xl border border-[#ffd875]/40 p-4 shadow-xl text-stone-200 animate-fadeIn relative overflow-hidden">
+    <div className="w-full max-w-xl mx-auto glass-panel-gold rounded-3xl border border-[#ffd875]/50 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.8)] text-stone-200 animate-fadeIn relative overflow-hidden">
       {/* Subtle magical glowing background accent */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
 

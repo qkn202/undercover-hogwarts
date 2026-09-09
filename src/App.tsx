@@ -14,8 +14,13 @@ import { assignOptimalRoles, type PlayerRoleStats } from './utils/roleAssignment
 import { createAiPlayer } from './data/aiBots';
 import { sound } from './utils/audio';
 import { DetectiveNotepad } from './components/DetectiveNotepad';
+import { BackgroundEffects } from './components/BackgroundEffects';
+import { WizardPersonaStudio, type HogwartsHouse } from './components/WizardPersonaStudio';
+import { RunicCodeInput } from './components/RunicCodeInput';
 import confetti from 'canvas-confetti';
-import { Crown, LogIn, AlertCircle, LogOut } from 'lucide-react';
+import { Crown, LogIn, AlertCircle, LogOut, Sparkles, ArrowRight, Loader2, Flame } from 'lucide-react';
+import { fetchRoomFromDatabase, closeRoomInDatabase } from './services/dbSync';
+import { FlooChatDrawer, openFlooDrawer } from './components/FlooChatDrawer';
 
 function evaluateWinCondition(
   players: Player[],
@@ -44,7 +49,7 @@ const INITIAL_CONFIG: RoomConfig = {
   customPairs: [],
 };
 
-export const HOST_DISCONNECT_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+export const HOST_DISCONNECT_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
 const SESSION_KEY = 'hogw_active_session';
 
@@ -140,6 +145,31 @@ export function App() {
   const [playerName, setPlayerName] = useState(() => {
     return localStorage.getItem('hogw_player_name') || 'Harry Potter';
   });
+  const [selectedHouse, setSelectedHouse] = useState<HogwartsHouse>(() => {
+    return (localStorage.getItem('hogw_player_house') as HogwartsHouse) || 'GRYFFINDOR';
+  });
+  const [userTag, setUserTag] = useState<string | undefined>(() => {
+    return localStorage.getItem('hogw_player_usertag') || undefined;
+  });
+  const [hpvnUid, setHpvnUid] = useState<string | undefined>(() => {
+    return localStorage.getItem('hogw_player_hpvn_uid') || undefined;
+  });
+
+  const handleUserTagChange = (tag: string | undefined) => {
+    setUserTag(tag);
+    try {
+      if (tag) localStorage.setItem('hogw_player_usertag', tag);
+      else localStorage.removeItem('hogw_player_usertag');
+    } catch {}
+  };
+
+  const handleHpvnUidChange = (uid: string | undefined) => {
+    setHpvnUid(uid);
+    try {
+      if (uid) localStorage.setItem('hogw_player_hpvn_uid', uid);
+      else localStorage.removeItem('hogw_player_hpvn_uid');
+    } catch {}
+  };
 
   const [myPlayer, setMyPlayer] = useState<Player | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -177,6 +207,7 @@ export function App() {
 
   // Network Manager Ref
   const netRef = useRef<NetworkManager | null>(null);
+  const pendingJoinRef = useRef<{ client: Player; code: string } | null>(null);
   const gameStatusRef = useRef(gameStatus);
 
   useEffect(() => {
@@ -338,6 +369,9 @@ export function App() {
               ...existing,
               id: incomingPlayer.id, // Update to active connection ID
               name: incomingPlayer.name,
+              house: incomingPlayer.house || existing.house,
+              userTag: incomingPlayer.userTag || existing.userTag,
+              hpvnUid: incomingPlayer.hpvnUid || existing.hpvnUid,
             };
 
             updated = [...prev];
@@ -434,17 +468,34 @@ export function App() {
       }
 
       case 'ROOM_STATE_SYNC': {
-        // If client is not currently in a room or has no player, NEVER process room sync!
-        if (!myPlayer || gameStatus === 'WELCOME') {
+        const state = msg.payload as RoomState;
+
+        // If client is in pending join state for this room, accept it and transition out of WELCOME!
+        const isPendingThisRoom = pendingJoinRef.current && pendingJoinRef.current.code === state.roomCode;
+
+        // If client is not currently in a room, has no player, and is not pending join for this room, ignore!
+        if ((!myPlayer && !isPendingThisRoom) || (gameStatus === 'WELCOME' && !isPendingThisRoom)) {
           return;
         }
 
-        const state = msg.payload as RoomState;
+        const effectivePlayer = myPlayer || pendingJoinRef.current?.client;
+        if (isPendingThisRoom && pendingJoinRef.current) {
+          setMyPlayer(pendingJoinRef.current.client);
+          setRoomCode(pendingJoinRef.current.code);
+          setConnStatus('CONNECTED');
+          saveLocalSession({
+            roomCode: pendingJoinRef.current.code,
+            isHost: false,
+            player: pendingJoinRef.current.client,
+            gameStatus: state.status,
+            hostDisconnectedAt: null,
+          });
+        }
 
         // CRITICAL GUARD: If non-host player was previously in room roster and now removed, they were kicked
-        if (!myPlayer.isHost) {
-          const wasInRoom = players.some((p) => p.id === myPlayer.id);
-          const isStillInRoom = state.players.some((p) => p.id === myPlayer.id);
+        if (effectivePlayer && !effectivePlayer.isHost) {
+          const wasInRoom = players.some((p) => p.id === effectivePlayer.id);
+          const isStillInRoom = state.players.some((p) => p.id === effectivePlayer.id);
           if (wasInRoom && !isStillInRoom) {
             console.log('[Client] Detected removal from room roster in ROOM_STATE_SYNC');
             cleanupAndExitToWelcome('Bạn đã bị chủ phòng mời ra khỏi phòng.', state.roomCode);
@@ -616,7 +667,7 @@ export function App() {
       }
 
       case 'ROOM_CLOSED': {
-        const reason = msg.payload?.message || 'Chủ phòng đã đóng phòng hoặc kết thúc phiên chơi.';
+        const reason = msg.payload?.message || 'Chủ phòng đã rời phòng hoặc kết thúc phiên chơi. Bàn chơi đã tự động giải tán!';
         cleanupAndExitToWelcome(reason);
         break;
       }
@@ -708,12 +759,35 @@ export function App() {
     }
   });
 
-  // Handle mobile tab switching & screen unlock: auto-reconnect when tab becomes active
+  // Handle mobile tab switching & screen unlock: auto-reconnect and self-healing when tab becomes active
   useEffect(() => {
     const handleVisibilityOrFocus = async () => {
       if (document.visibilityState === 'visible') {
-        console.log('[App] Tab resumed / focused. Checking connection status...');
+        console.log('[App] Tab resumed / focused / online. Checking connection and state...');
 
+        // 1. Fast Database Snapshot Recovery (takes < 50ms)
+        if (roomCode && myPlayer) {
+          fetchRoomFromDatabase(roomCode).then((dbState) => {
+            if (dbState) {
+              console.log('[App] Restored fresh room snapshot from Database:', dbState.status);
+              setPlayers(dbState.players);
+              setConfig(dbState.config);
+              setRoundNumber(dbState.roundNumber);
+              setGameStatus(dbState.status);
+              if (dbState.currentPair) setCurrentPair(dbState.currentPair);
+              if (dbState.currentSpeakerId !== undefined) setCurrentSpeakerId(dbState.currentSpeakerId);
+              if (dbState.winner !== undefined) setWinner(dbState.winner);
+
+              // Restore secret card if available in DB players
+              const selfInDb = dbState.players.find((p) => p.id === myPlayer.id);
+              if (selfInDb && (selfInDb.role !== myPlayer.role || selfInDb.word !== myPlayer.word)) {
+                setMyPlayer((prev) => (prev ? { ...prev, ...selfInDb } : null));
+              }
+            }
+          }).catch(() => {});
+        }
+
+        // 2. Realtime WebSocket check & auto-reconnect
         if (myPlayer && !myPlayer.isHost && roomCode) {
           const isHealthy = netRef.current?.isSocketHealthy();
           if (!isHealthy) {
@@ -729,7 +803,7 @@ export function App() {
               setConnStatus('ERROR');
             }
           } else {
-            // Socket is healthy: immediately send sync refresh to Host
+            // Socket is healthy: send sync refresh to Host
             netRef.current?.sendToHost({
               type: 'JOIN_REQUEST',
               senderId: myPlayer.id,
@@ -753,35 +827,28 @@ export function App() {
           }
         }
       } else if (document.visibilityState === 'hidden') {
-        if (netRef.current && myPlayer && !myPlayer.isHost) {
-          console.log('[App] Client tab hidden. Destroying connection to prevent ghosting.');
-          // Send explicit leave before destruction just in case
-          netRef.current.sendToHost({
-            type: 'PLAYER_LEFT',
-            senderId: myPlayer.id,
-            payload: { playerId: myPlayer.id },
-          });
-          netRef.current.destroy();
-        } else if (myPlayer?.isHost) {
-          console.log('[App] Host tab hidden. Keeping connection alive but browser may throttle.');
-        }
+        // Mobile tab hidden or user switched to another app (e.g. Zalo, Messenger, phone call).
+        // CRITICAL: NEVER destroy connection or send PLAYER_LEFT here!
+        console.log('[App] Tab backgrounded. Keeping session persistent.');
       }
     };
 
     const handleOffline = () => {
       console.warn('[App] Device went offline.');
       setConnStatus('ERROR');
-      setErrorMsg('Mất kết nối Internet. Vui lòng kiểm tra lại mạng!');
+      setErrorMsg('Mất kết nối Internet tạm thời. Đang chờ có sóng để tự động kết nối lại...');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('pageshow', handleVisibilityOrFocus);
     window.addEventListener('online', handleVisibilityOrFocus);
     window.addEventListener('offline', handleOffline);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('pageshow', handleVisibilityOrFocus);
       window.removeEventListener('online', handleVisibilityOrFocus);
       window.removeEventListener('offline', handleOffline);
     };
@@ -948,6 +1015,9 @@ export function App() {
       name: playerName.trim(),
       isHost: true,
       isAi: false,
+      house: selectedHouse,
+      userTag,
+      hpvnUid,
     };
 
     setMyPlayer(host);
@@ -999,37 +1069,45 @@ export function App() {
       name: nameToUse,
       isHost: false,
       isAi: false,
+      house: selectedHouse,
+      userTag,
+      hpvnUid,
     };
 
-    setMyPlayer(client);
-    setPlayers([client]);
-    setRoomCode(code);
-    setGameStatus('LOBBY');
-
-    saveLocalSession({
-      roomCode: code,
-      isHost: false,
-      player: client,
-      gameStatus: 'LOBBY',
-      hostDisconnectedAt: null,
-    });
+    pendingJoinRef.current = { client, code };
+    setConnStatus('CONNECTING');
 
     try {
       if (netRef.current) {
-        setConnStatus('CONNECTING');
         await netRef.current.initClient(code, client);
+        setMyPlayer(client);
+        setPlayers([client]);
+        setRoomCode(code);
         setGameStatus('LOBBY');
         setConnStatus('CONNECTED');
+        saveLocalSession({
+          roomCode: code,
+          isHost: false,
+          player: client,
+          gameStatus: 'LOBBY',
+          hostDisconnectedAt: null,
+        });
         sound.playVictoryFanfare();
       }
     } catch (err: any) {
       clearLocalSession();
       setConnStatus('IDLE');
+      setGameStatus('WELCOME');
+      setMyPlayer(null);
+      setPlayers([]);
+      setRoomCode('');
       setErrorMsg(
         err?.message?.includes('Timeout')
           ? `Hết thời gian chờ kết nối tới phòng "${code}". Vui lòng kiểm tra lại mã phòng và đảm bảo Chủ phòng đang mở tab!`
-          : err?.message || 'Không tìm thấy phòng Hogwarts hoặc lỗi kết nối. Kiểm tra lại mã phòng!'
+          : err?.message || `Không tìm thấy phòng "${code}". Vui lòng kiểm tra lại mã phòng do Chủ phòng cung cấp!`
       );
+    } finally {
+      pendingJoinRef.current = null;
     }
   };
 
@@ -1080,31 +1158,69 @@ export function App() {
     }
   };
 
-  // Host periodic activity tracker: continuously updates lastActiveTimestamp in localStorage
+  // Host inactivity watchdog: tracks user interaction (pointer/touch/key) and auto-disbands if Host is AFK > 30 mins
   useEffect(() => {
-    if (!myPlayer?.isHost || !roomCode) return;
-    const interval = setInterval(() => {
+    if (!myPlayer?.isHost || !roomCode || gameStatus === 'WELCOME') return;
+
+    let lastUserAction = Date.now();
+    const markAction = () => {
+      lastUserAction = Date.now();
+    };
+
+    window.addEventListener('pointerdown', markAction);
+    window.addEventListener('keydown', markAction);
+    window.addEventListener('touchstart', markAction);
+
+    const afkInterval = setInterval(() => {
+      const now = Date.now();
       const sess = getLocalSession();
       if (sess && sess.isHost) {
         saveLocalSession({
           ...sess,
-          lastActiveTimestamp: Date.now(),
+          lastActiveTimestamp: now,
           hostDisconnectedAt: null,
         });
       }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [myPlayer?.isHost, roomCode]);
+
+      // Check if Host has had zero interaction for > 30 minutes
+      if (now - lastUserAction > HOST_DISCONNECT_EXPIRY_MS) {
+        console.warn('[App] Host has been idle/AFK with no interaction for > 30 minutes. Disbanding room...');
+        if (netRef.current) {
+          netRef.current.broadcast({
+            type: 'ROOM_CLOSED',
+            senderId: myPlayer.id,
+            payload: { message: 'Chủ phòng đã không có thao tác (AFK) quá 30 phút. Bàn chơi đã được tự động giải tán!' },
+          });
+          if (roomCode) {
+            closeRoomInDatabase(roomCode).catch(() => {});
+          }
+        }
+        setTimeout(() => {
+          cleanupAndExitToWelcome('Bạn đã bị tự động mời ra khỏi phòng do không có thao tác (AFK) quá 30 phút.');
+        }, 350);
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(afkInterval);
+      window.removeEventListener('pointerdown', markAction);
+      window.removeEventListener('keydown', markAction);
+      window.removeEventListener('touchstart', markAction);
+    };
+  }, [myPlayer?.isHost, roomCode, gameStatus]);
 
   // Host socket health check: automatically reconnect if socket dies without a visibility change
   useEffect(() => {
     if (!myPlayer?.isHost || !roomCode) return;
     const healthInterval = setInterval(() => {
+      // ONLY check if tab is active/visible! Never thrash when tab is hidden or backgrounded!
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+
       if (netRef.current && !netRef.current.isSocketHealthy()) {
-        console.warn('[App] Host socket unhealthy detected by interval! Forcing reconnect...');
+        console.warn('[App] Host socket unhealthy detected while active! Reconnecting softly...');
         netRef.current.reconnectHostIfNeeded(myPlayer);
       }
-    }, 5000);
+    }, 15000);
     return () => clearInterval(healthInterval);
   }, [myPlayer, roomCode]);
 
@@ -1173,8 +1289,8 @@ export function App() {
       const remainingMs = HOST_DISCONNECT_EXPIRY_MS - elapsed;
 
       if (remainingMs <= 0) {
-        console.log('[Session] Host disconnected for > 10 minutes. Evicting session and resetting.');
-        cleanupAndExitToWelcome('Phòng chơi đã tự động giải tán vì chủ phòng đã ngắt kết nối quá 10 phút.');
+        console.log('[Session] Host disconnected for > 30 minutes. Evicting session and resetting.');
+        cleanupAndExitToWelcome('Phòng chơi đã tự động giải tán vì chủ phòng đã ngắt kết nối quá 30 phút.');
       } else {
         setDisconnectCountdown(Math.ceil(remainingMs / 1000));
       }
@@ -1189,12 +1305,17 @@ export function App() {
   const handleLeaveRoom = () => {
     if (netRef.current && myPlayer) {
       if (myPlayer.isHost) {
-        // Broadcast to all connected clients that the room has closed
+        console.log('[App] Host is leaving. Disbanding room and kicking all players...');
+        // 1. Broadcast to all connected clients that the room has closed
         netRef.current.broadcast({
           type: 'ROOM_CLOSED',
           senderId: myPlayer.id,
-          payload: { message: 'Chủ phòng đã đóng phòng hoặc kết thúc phiên chơi.' },
+          payload: { message: 'Chủ phòng đã rời khỏi phòng. Bàn chơi đã được tự động giải tán!' },
         });
+        // 2. Delete room from database
+        if (roomCode) {
+          closeRoomInDatabase(roomCode).catch(() => {});
+        }
       } else {
         netRef.current.sendToHost({
           type: 'PLAYER_LEFT',
@@ -1203,10 +1324,10 @@ export function App() {
         });
       }
     }
-    // Allow 120ms for the message to be dispatched over websocket buffer before teardown
+    // Allow 350ms for the message to be dispatched over websocket buffer before teardown
     setTimeout(() => {
-      cleanupAndExitToWelcome();
-    }, 120);
+      cleanupAndExitToWelcome(myPlayer?.isHost ? 'Bạn đã rời và giải tán phòng chơi.' : 'Bạn đã rời khỏi phòng.');
+    }, 350);
   };
 
   // Action: Host adds AI Bot
@@ -1514,8 +1635,11 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0813] text-stone-200 selection:bg-[#740001] selection:text-[#ffd875]">
-      {/* Top Header */}
+    <div className="min-h-screen flex flex-col bg-[#07040e] text-stone-200 selection:bg-[#740001] selection:text-[#ffd875] relative overflow-x-hidden">
+      {/* 60FPS Ambient Starlight & Aurora Effects */}
+      <BackgroundEffects />
+
+      {/* Top Floating Glass Capsule Dock Header */}
       <Header
         roomCode={gameStatus !== 'WELCOME' ? roomCode : undefined}
         onOpenHowToPlay={() => setIsHowToPlayOpen(true)}
@@ -1524,8 +1648,8 @@ export function App() {
         onLeaveRoom={gameStatus !== 'WELCOME' ? handleLeaveRoom : undefined}
       />
 
-      {/* Main Content Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+      {/* Main Tabletop Arena Container */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-4 sm:py-8 flex flex-col justify-start relative z-10">
         {/* Host Disconnected 10-Minute Countdown Banner */}
         {gameStatus !== 'WELCOME' && hostDisconnectedAt && disconnectCountdown !== null && (
           <div className="mb-4 p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/60 text-amber-200 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl backdrop-blur-md animate-pulse">
@@ -1554,9 +1678,9 @@ export function App() {
 
         {/* Error Notification */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-red-950/80 border border-red-700/80 text-red-200 text-xs flex items-center justify-between gap-2 shadow-lg animate-fadeIn">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-950/90 border border-red-700/80 text-red-200 text-xs sm:text-sm flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md animate-fadeIn">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
               <span>{errorMsg}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -1569,7 +1693,7 @@ export function App() {
                   <span>Về Trang Chủ</span>
                 </button>
               )}
-              <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-white p-1">
+              <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-white p-1 text-base">
                 ✕
               </button>
             </div>
@@ -1578,131 +1702,171 @@ export function App() {
 
         {/* SCREEN 1: WELCOME & ROOM ENTRANCE */}
         {(gameStatus === 'WELCOME' || !myPlayer) && (
-          <div className="w-full max-w-md mx-auto flex flex-col gap-5 animate-fadeIn">
-            {/* Title & Introduction */}
-            <div className="text-center relative">
-              <div className="relative inline-block mb-3">
-                <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-[#ffd875] via-[#740001] to-[#120a1c] p-[2px] shadow-[0_0_35px_rgba(200,170,110,0.35)]">
-                  <div className="w-full h-full rounded-[22px] bg-[#10081a] flex items-center justify-center text-4xl select-none filter drop-shadow">
-                    🧙‍♂️
+          <div className="w-full flex flex-col items-center gap-8 animate-fadeIn max-w-4xl mx-auto py-2 sm:py-4">
+            {/* Cinematic Hero Title */}
+            <div className="text-center relative flex flex-col items-center">
+              {/* Floating House Crest Aura */}
+              <div className="relative mb-3 flex items-center justify-center">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#740001] via-[#c8aa6e] to-[#0d6241] p-[2.5px] shadow-[0_0_40px_rgba(200,170,110,0.45)] animate-[breathingPulse_4s_ease-in-out_infinite]">
+                  <div className="w-full h-full rounded-full bg-[#0d0718] flex items-center justify-center text-4xl sm:text-5xl select-none filter drop-shadow">
+                    🏰
                   </div>
                 </div>
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#740001] border border-[#ffd875] text-[#ffd875] text-[10px] font-serif font-black tracking-widest uppercase shadow">
-                  HOGWARTS
+                <div className="absolute -bottom-2 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#740001] to-[#8a1c14] border border-[#ffd875] text-[#ffd875] text-[10px] sm:text-xs font-cinzel font-black tracking-widest uppercase shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                  HOGWARTS 1890
                 </div>
               </div>
-              <h2 className="font-cinzel font-black text-2xl sm:text-3xl tracking-wide gold-gradient-text">
-                HỌC VIỆN HOGWARTS
-              </h2>
-              <p className="text-xs text-[#c8aa6e]/90 mt-1 max-w-xs mx-auto leading-relaxed font-medium">
-                Cuộc đấu trí ma thuật giữa <span className="text-[#ffd875] font-semibold">Học Sinh</span> và <span className="text-red-400 font-semibold">Tử Thần Thực Tử</span>.
+
+              <h1 className="font-title font-black text-3xl sm:text-5xl tracking-wide gold-gradient-text drop-shadow-[0_2px_15px_rgba(255,216,117,0.3)]">
+                UNDERCOVER HOGWARTS
+              </h1>
+              <p className="text-xs sm:text-sm text-[#e0cfab] mt-2 max-w-lg mx-auto leading-relaxed font-serif">
+                Đại chiến suy luận ma thuật bí mật giữa{' '}
+                <span className="text-[#ffd875] font-bold border-b border-[#ffd875]/40 pb-0.5">Học Sinh Hogwarts</span>{' '}
+                và <span className="text-red-400 font-bold border-b border-red-500/40 pb-0.5">Tử Thần Thực Tử</span>.
               </p>
             </div>
 
-            {/* Profile Setup Box — Platform 9¾ Ticket */}
-            <div className="glass-panel-gold rounded-3xl p-5 shadow-2xl flex flex-col gap-4 relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-[#c8aa6e]/30 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg select-none">🎫</span>
-                  <span className="text-xs font-cinzel font-bold text-[#ffd875] tracking-wider uppercase">
-                    Vé Nhập Học Platform 9¾
-                  </span>
+            {/* Wizard Persona Studio Component */}
+            <div className="w-full max-w-2xl">
+              <WizardPersonaStudio
+                playerName={playerName}
+                onNameChange={(name) => {
+                  setPlayerName(name);
+                  try {
+                    localStorage.setItem('hogw_player_name', name);
+                  } catch {}
+                }}
+                selectedHouse={selectedHouse}
+                onHouseChange={(house) => {
+                  setSelectedHouse(house);
+                  try {
+                    localStorage.setItem('hogw_player_house', house);
+                  } catch {}
+                }}
+                userTag={userTag}
+                onUserTagChange={handleUserTagChange}
+                hpvnUid={hpvnUid}
+                onHpvnUidChange={handleHpvnUidChange}
+              />
+            </div>
+
+            {/* Dual Grand Portals (Side-by-side on desktop, stacked on mobile) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-3xl">
+              {/* Portal 1: Tạo phòng mới (Host) */}
+              <div className="glass-panel-gold rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffd875] transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#ffd875]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#ffd875]/15 transition-all" />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 rounded-xl bg-[#740001]/60 border border-[#ffd875]/40 text-xl shadow-inner">
+                        👑
+                      </span>
+                      <div>
+                        <h3 className="font-cinzel font-black text-base text-[#ffd875] tracking-wide">
+                          KHỞI TẠO BÀN ĐẤU
+                        </h3>
+                        <p className="text-[11px] text-stone-400 font-serif">Trở thành Chủ Trì (Host)</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#26143d] text-[#c8aa6e] border border-[#c8aa6e]/30">
+                      Host Mode
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-stone-300 font-serif leading-relaxed mb-4">
+                    Triệu tập các phù thủy vào Đại Sảnh Đường, tùy biến tỉ lệ Gián Điệp, thêm AI Bot hỗ trợ và điều phối phiên biểu quyết.
+                  </p>
                 </div>
-                <span className="text-[10px] font-mono text-[#c8aa6e] bg-[#211236] px-2 py-0.5 rounded-full border border-[#c8aa6e]/30">
-                  Hogwarts Express
-                </span>
+
+                <button
+                  onClick={handleCreateRoom}
+                  disabled={connStatus === 'CONNECTING'}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] hover:from-[#941c14] hover:to-[#b32317] text-[#ffd875] font-cinzel font-black text-sm tracking-wider border border-[#ffd875]/60 shadow-[0_4px_20px_rgba(116,0,1,0.5)] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group/btn disabled:opacity-50"
+                >
+                  <div className="absolute inset-0 shimmer-gold opacity-30 pointer-events-none" />
+                  <Crown size={18} className="text-[#ffd875]" />
+                  <span>TẠO PHÒNG MỚI</span>
+                  <ArrowRight size={16} className="text-[#ffd875] transition-transform group-hover/btn:translate-x-1" />
+                </button>
               </div>
 
-              <div>
-                <label className="text-[11px] font-serif font-semibold text-[#c8aa6e] uppercase tracking-wider block mb-1.5">
-                  Danh Xưng Phù Thủy Của Bạn
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={playerName}
-                    onChange={(e) => {
-                      setPlayerName(e.target.value);
-                      localStorage.setItem('hogw_player_name', e.target.value);
-                    }}
-                    maxLength={20}
-                    placeholder="Nhập tên của bạn..."
-                    className="w-full pl-3.5 pr-10 py-3 rounded-xl bg-[#0c0614] border border-[#c8aa6e]/50 text-sm font-serif font-bold text-[#f3efe6] focus:outline-none focus:border-[#ffd875] focus:ring-1 focus:ring-[#ffd875] shadow-inner"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-base select-none opacity-80">
-                    🪄
-                  </span>
+              {/* Portal 2: Gia nhập bàn chơi (Join) */}
+              <div className="glass-panel-gold rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-[#38bdf8] transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#38bdf8]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#38bdf8]/15 transition-all" />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 rounded-xl bg-[#0e3b66]/60 border border-[#38bdf8]/40 text-xl shadow-inner">
+                        🗝️
+                      </span>
+                      <div>
+                        <h3 className="font-cinzel font-black text-base text-[#7dd3fc] tracking-wide">
+                          GIA NHẬP BÀN CHƠI
+                        </h3>
+                        <p className="text-[11px] text-stone-400 font-serif">Bước qua Cổng Không Gian</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#0f2847] text-[#7dd3fc] border border-[#38bdf8]/30">
+                      Runic Code
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-stone-300 font-serif leading-relaxed mb-3">
+                    Nhập mã phòng 4 ký tự do Chủ Phòng cung cấp để nhận thẻ thân phận bí mật:
+                  </p>
+
+                  <div className="my-2">
+                    <RunicCodeInput
+                      value={inputRoomCode}
+                      onChange={setInputRoomCode}
+                      length={4}
+                      onEnter={handleJoinRoom}
+                      disabled={connStatus === 'CONNECTING'}
+                    />
+                  </div>
                 </div>
 
-                {/* Quick Wizard Avatars / Names */}
-                <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                  <span className="text-[10px] text-stone-400 font-serif mr-1">Gợi ý:</span>
-                  {[
-                    { label: 'Harry', name: 'Harry Potter' },
-                    { label: 'Hermione', name: 'Hermione Granger' },
-                    { label: 'Ron', name: 'Ron Weasley' },
-                    { label: 'Draco', name: 'Draco Malfoy' },
-                    { label: 'Luna', name: 'Luna Lovegood' },
-                  ].map((wiz) => (
-                    <button
-                      key={wiz.label}
-                      type="button"
-                      onClick={() => {
-                        setPlayerName(wiz.name);
-                        localStorage.setItem('hogw_player_name', wiz.name);
-                        sound.playButtonChime();
-                      }}
-                      className="px-2 py-0.5 rounded-md bg-[#241538] hover:bg-[#392157] text-[#ffd875] text-[10px] font-serif border border-[#c8aa6e]/30 hover:border-[#ffd875] transition-all cursor-pointer active:scale-95"
-                    >
-                      {wiz.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={handleJoinRoom}
+                  disabled={connStatus === 'CONNECTING' || inputRoomCode.trim().length === 0}
+                  className="w-full mt-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#0e3b66] via-[#1a4e7e] to-[#0e3b66] hover:from-[#174d82] hover:to-[#22639e] text-[#bae6fd] font-cinzel font-black text-sm tracking-wider border border-[#38bdf8]/50 shadow-[0_4px_20px_rgba(14,59,102,0.5)] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group/btn"
+                >
+                  {connStatus === 'CONNECTING' ? (
+                    <>
+                      <Loader2 size={18} className="text-[#38bdf8] animate-spin" />
+                      <span>ĐANG TÌM PHÒNG...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn size={18} className="text-[#38bdf8]" />
+                      <span>BƯỚC VÀO PHÒNG</span>
+                      <ArrowRight size={16} className="text-[#38bdf8] transition-transform group-hover/btn:translate-x-1" />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Entrance Actions */}
-            <div className="flex flex-col gap-3.5">
-              {/* Create Room Button */}
+            {/* Bottom Quick Links */}
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-serif text-stone-400 mt-1">
               <button
-                onClick={handleCreateRoom}
-                disabled={connStatus === 'CONNECTING'}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8a1c14] to-[#740001] hover:from-[#8c0304] hover:to-[#a11a1a] text-[#ffd875] font-serif font-black text-sm sm:text-base tracking-wider border-2 border-[#ffd875]/70 shadow-[0_8px_25px_rgba(116,0,1,0.5)] flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group"
+                type="button"
+                onClick={() => setIsPassAndPlayOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1b1029]/80 border border-[#c8aa6e]/30 hover:border-[#ffd875] text-[#e0cfab] hover:text-[#ffd875] transition-all cursor-pointer shadow-sm active:scale-95"
               >
-                <div className="absolute inset-0 shimmer-gold opacity-30 pointer-events-none" />
-                <Crown size={20} className="text-[#ffd875] filter drop-shadow" />
-                <span>TẠO PHÒNG MỚI (LÀM HOST)</span>
+                <span>📱</span>
+                <span>Chơi chung trên 1 điện thoại (Pass & Play)</span>
               </button>
 
-              {/* Join Room Portal Box */}
-              <div className="glass-panel p-3 rounded-2xl flex items-center gap-2 border border-[#c8aa6e]/40 shadow-xl">
-                <input
-                  type="text"
-                  value={inputRoomCode}
-                  onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
-                  maxLength={6}
-                  placeholder="NHẬP MÃ PHÒNG (VD: HOGW)"
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#0b0612] border border-stone-800 text-xs font-mono font-black tracking-widest text-[#ffd875] uppercase placeholder:normal-case placeholder:font-serif placeholder:font-normal placeholder:text-stone-500 focus:outline-none focus:border-[#ffd875] shadow-inner"
-                />
-                <button
-                  onClick={handleJoinRoom}
-                  disabled={connStatus === 'CONNECTING'}
-                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#2a1742] to-[#3a205a] hover:from-[#3a205a] hover:to-[#4e2c7a] text-[#ffd875] font-serif font-black text-xs sm:text-sm border border-[#ffd875]/50 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-lg shrink-0"
-                >
-                  <LogIn size={16} />
-                  <span>VÀO PHÒNG</span>
-                </button>
-              </div>
-
-              {/* Offline fallback mode */}
-              <div className="text-center pt-1">
-                <button
-                  onClick={() => setIsPassAndPlayOpen(true)}
-                  className="text-xs text-[#c8aa6e]/80 hover:text-[#ffd875] underline decoration-dotted transition-colors cursor-pointer font-medium"
-                >
-                  📱 Hoặc chơi chung trên 1 máy điện thoại (Pass & Play)
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsHowToPlayOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1b1029]/80 border border-[#c8aa6e]/30 hover:border-[#ffd875] text-[#e0cfab] hover:text-[#ffd875] transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                <Sparkles size={13} className="text-[#ffd875]" />
+                <span>Luật chơi & Bí quyết suy luận</span>
+              </button>
             </div>
           </div>
         )}
@@ -2133,6 +2297,21 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* Floating Floo Chat Trigger when in Game/Lobby */}
+      {gameStatus !== 'WELCOME' && (
+        <button
+          onClick={() => openFlooDrawer()}
+          className="fixed bottom-4 right-4 z-40 px-3.5 py-2 rounded-full bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] hover:from-[#941c14] hover:to-[#b32317] text-[#ffd875] border border-[#ffd875]/70 flex items-center gap-1.5 text-xs font-serif font-bold cursor-pointer transition-all active:scale-95 shadow-[0_4px_20px_rgba(116,0,1,0.6)]"
+          title="Mở Mạng Floo (Chat HPVN)"
+        >
+          <Flame size={15} className="text-[#ffd875] animate-pulse" />
+          <span className="hidden sm:inline">Mạng Floo</span>
+        </button>
+      )}
+
+      {/* Embedded Mạng Floo Slide-out Drawer */}
+      <FlooChatDrawer />
     </div>
   );
 }

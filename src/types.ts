@@ -1,6 +1,14 @@
 export type Role = 'STUDENT' | 'DEATH_EATER' | 'MR_WHITE';
 
-export type HogwartsHouse = 'Gryffindor' | 'Slytherin' | 'Ravenclaw' | 'Hufflepuff';
+export type HogwartsHouse =
+  | 'GRYFFINDOR'
+  | 'SLYTHERIN'
+  | 'RAVENCLAW'
+  | 'HUFFLEPUFF'
+  | 'Gryffindor'
+  | 'Slytherin'
+  | 'Ravenclaw'
+  | 'Hufflepuff';
 
 export interface Player {
   id: string;
@@ -13,6 +21,8 @@ export interface Player {
   word?: string | null;
   isEliminated?: boolean;
   speakingOrder?: number; // Thứ tự phát biểu trong ván (1, 2, 3...)
+  userTag?: string;       // HPVN Member Custom Title
+  hpvnUid?: string;       // HPVN Firebase Auth UID
 }
 
 
