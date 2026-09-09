@@ -1667,7 +1667,7 @@ export function App() {
               <button
                 onClick={handleCreateRoom}
                 disabled={connStatus === 'CONNECTING'}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8a1c14] to-[#740001] hover:from-[#8c0304] hover:to-[#a11a1a] text-[#ffd875] font-cinzel font-bold text-sm sm:text-base tracking-wider border-2 border-[#ffd875]/70 shadow-[0_8px_25px_rgba(116,0,1,0.5)] flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8a1c14] to-[#740001] hover:from-[#8c0304] hover:to-[#a11a1a] text-[#ffd875] font-serif font-black text-sm sm:text-base tracking-wider border-2 border-[#ffd875]/70 shadow-[0_8px_25px_rgba(116,0,1,0.5)] flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group"
               >
                 <div className="absolute inset-0 shimmer-gold opacity-30 pointer-events-none" />
                 <Crown size={20} className="text-[#ffd875] filter drop-shadow" />
@@ -1687,7 +1687,7 @@ export function App() {
                 <button
                   onClick={handleJoinRoom}
                   disabled={connStatus === 'CONNECTING'}
-                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#2a1742] to-[#3a205a] hover:from-[#3a205a] hover:to-[#4e2c7a] text-[#ffd875] font-cinzel font-bold text-xs sm:text-sm border border-[#ffd875]/50 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-lg shrink-0"
+                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#2a1742] to-[#3a205a] hover:from-[#3a205a] hover:to-[#4e2c7a] text-[#ffd875] font-serif font-black text-xs sm:text-sm border border-[#ffd875]/50 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-lg shrink-0"
                 >
                   <LogIn size={16} />
                   <span>VÀO PHÒNG</span>

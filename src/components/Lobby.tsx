@@ -620,9 +620,9 @@ export const Lobby: React.FC<LobbyProps> = ({
             onStartGame();
           }}
           disabled={!canStart}
-          className={`w-full py-4 sm:py-4.5 rounded-2xl font-cinzel font-black text-base sm:text-lg tracking-wider flex items-center justify-center gap-2.5 shadow-2xl transition-all cursor-pointer relative overflow-hidden group ${
+          className={`w-full py-4 sm:py-4.5 rounded-2xl font-serif font-black text-base sm:text-lg tracking-wider flex items-center justify-center gap-2.5 shadow-2xl transition-all cursor-pointer relative overflow-hidden group ${
             canStart
-              ? 'bg-gradient-to-r from-[#740001] via-[#c8aa6e] to-[#740001] text-[#120a1c] hover:scale-[1.01] active:scale-[0.99] border-2 border-[#ffd875] shadow-[0_8px_30px_rgba(200,170,110,0.4)]'
+              ? 'bg-gradient-to-r from-[#740001] via-[#c8aa6e] to-[#740001] text-[#120d18] hover:scale-[1.01] active:scale-[0.99] border-2 border-[#ffd875] shadow-[0_8px_30px_rgba(200,170,110,0.4)]'
               : 'bg-stone-800/80 text-stone-500 border border-stone-700 cursor-not-allowed'
           }`}
         >
