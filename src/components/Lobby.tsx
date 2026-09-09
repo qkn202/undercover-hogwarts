@@ -8,7 +8,7 @@ import { sound } from '../utils/audio';
 interface LobbyProps {
   roomCode: string;
   isHost: boolean;
-  myPlayerId: string;
+  myPlayer: Player;
   players: Player[];
   config: RoomConfig;
   onUpdateConfig: (newConfig: Partial<RoomConfig>) => void;
@@ -24,7 +24,7 @@ interface LobbyProps {
 export const Lobby: React.FC<LobbyProps> = ({
   roomCode,
   isHost,
-  myPlayerId,
+  myPlayer,
   players,
   config,
   onUpdateConfig,
@@ -38,8 +38,6 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [showQr, setShowQr] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newNameInput, setNewNameInput] = useState('');
-
-  const myPlayer = players.find((p) => p.id === myPlayerId);
 
   const handleStartEditing = () => {
     setNewNameInput(myPlayer?.name || '');
@@ -463,7 +461,7 @@ export const Lobby: React.FC<LobbyProps> = ({
         {/* Players Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {players.map((p) => {
-            const isMe = p.id === myPlayerId;
+            const isMe = p.id === myPlayer.id;
 
             return (
               <div

@@ -765,6 +765,7 @@ export function App() {
       };
 
       setMyPlayer(client);
+      setPlayers([client]);
       setRoomCode(roomParam);
       setInputRoomCode(roomParam);
       setGameStatus('LOBBY');
@@ -815,6 +816,7 @@ export function App() {
     console.log('[App] Auto-reconnecting from saved local session:', session);
     setRoomCode(session.roomCode);
     setMyPlayer(session.player);
+    setPlayers([session.player]);
     if (session.gameStatus) {
       setGameStatus(session.gameStatus);
     }
@@ -933,7 +935,9 @@ export function App() {
     };
 
     setMyPlayer(client);
+    setPlayers([client]);
     setRoomCode(code);
+    setGameStatus('LOBBY');
 
     saveLocalSession({
       roomCode: code,
@@ -1524,7 +1528,7 @@ export function App() {
           <Lobby
             roomCode={roomCode}
             isHost={myPlayer.isHost}
-            myPlayerId={myPlayer.id}
+            myPlayer={myPlayer}
             players={players}
             config={config}
             offlinePlayerIds={offlinePlayerIds}
