@@ -1035,6 +1035,18 @@ export function App() {
     return () => clearInterval(interval);
   }, [myPlayer?.isHost, roomCode]);
 
+  // Host socket health check: automatically reconnect if socket dies without a visibility change
+  useEffect(() => {
+    if (!myPlayer?.isHost || !roomCode) return;
+    const healthInterval = setInterval(() => {
+      if (netRef.current && !netRef.current.isSocketHealthy()) {
+        console.warn('[App] Host socket unhealthy detected by interval! Forcing reconnect...');
+        netRef.current.reconnectHostIfNeeded(myPlayer);
+      }
+    }, 5000);
+    return () => clearInterval(healthInterval);
+  }, [myPlayer, roomCode]);
+
   // Host beforeunload listener: notify peers on true tab close and destroy connection
   useEffect(() => {
     const handleHostUnload = () => {

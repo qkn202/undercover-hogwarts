@@ -256,16 +256,16 @@ export class NetworkManager {
           } else {
             // Grace period: do not immediately declare host disconnected on brief tab switches
             if (this.hostPresent && !this.hostDisconnectTimer) {
-              console.log('[Supabase Client] Host presence not found in sync, starting 6s grace timer...');
+              console.log('[Supabase Client] Host presence not found in sync, starting 12s grace timer...');
               this.hostDisconnectTimer = setTimeout(() => {
                 this.hostDisconnectTimer = null;
                 if (!this.checkIsHostInPresence()) {
-                  console.log('[Supabase Client] Host presence confirmed lost after 6s grace period.');
+                  console.log('[Supabase Client] Host presence confirmed lost after 12s grace period.');
                   this.hostPresent = false;
                   this.hostDisconnectedAt = Date.now();
                   this.onHostDisconnected?.(this.hostDisconnectedAt);
                 }
-              }, 6000);
+              }, 12000);
             }
           }
         });
@@ -275,16 +275,16 @@ export class NetworkManager {
           const hostLeft = Array.isArray(leftPresences) && leftPresences.some((p: any) => p?.isHost);
           if (hostLeft) {
             if (this.hostPresent && !this.hostDisconnectTimer) {
-              console.log('[Supabase Client] Host leave event received, starting 6s grace timer...');
+              console.log('[Supabase Client] Host leave event received, starting 12s grace timer...');
               this.hostDisconnectTimer = setTimeout(() => {
                 this.hostDisconnectTimer = null;
                 if (!this.checkIsHostInPresence()) {
-                  console.log('[Supabase Client] Host confirmed left after grace period.');
+                  console.log('[Supabase Client] Host leave confirmed after 12s grace period.');
                   this.hostPresent = false;
                   this.hostDisconnectedAt = Date.now();
                   this.onHostDisconnected?.(this.hostDisconnectedAt);
                 }
-              }, 6000);
+              }, 12000);
             }
           }
         });
