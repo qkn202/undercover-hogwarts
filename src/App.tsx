@@ -646,7 +646,7 @@ export function App() {
                   return updated;
                 });
               }
-            }, 60000);
+            }, 2000); // 2-second grace period for Lobby (fast eviction)
 
             lobbyDisconnectTimersRef.current.set(playerId, timer);
             setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
