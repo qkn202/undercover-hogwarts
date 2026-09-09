@@ -53,13 +53,17 @@ export class NetworkManager {
   public isPlayerInPresence(playerId: string): boolean {
     if (!this.channel) return false;
     const presenceState = this.channel.presenceState() || {};
-    return !!presenceState[playerId];
+    const list = presenceState[playerId] as any[];
+    return !!(list && list.length > 0);
   }
 
   public getPresentPlayerIds(): string[] {
     if (!this.channel) return [];
     const presenceState = this.channel.presenceState() || {};
-    return Object.keys(presenceState);
+    return Object.keys(presenceState).filter(key => {
+      const list = presenceState[key] as any[];
+      return list && list.length > 0;
+    });
   }
 
   private startHeartbeat(isHost: boolean) {

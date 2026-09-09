@@ -145,6 +145,11 @@ export function App() {
 
   // Network Manager Ref
   const netRef = useRef<NetworkManager | null>(null);
+  const gameStatusRef = useRef(gameStatus);
+
+  useEffect(() => {
+    gameStatusRef.current = gameStatus;
+  }, [gameStatus]);
 
   // Player role history tracker across rounds (for fair distribution & anti-streak)
   const roleHistoryRef = useRef<Map<string, PlayerRoleStats>>(new Map());
@@ -619,10 +624,11 @@ export function App() {
                 setPlayers((prev) => {
                   const updated = prev.filter((p) => p.id !== playerId);
                   if (netRef.current) {
+                    const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
                     netRef.current.broadcastRoomState({
                       roomCode,
                       hostId: myPlayer.id,
-                      status: 'LOBBY',
+                      status: latestStatus as GameStatus,
                       players: updated,
                       config,
                       roundNumber,
