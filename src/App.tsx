@@ -544,6 +544,15 @@ export function App() {
             hostDisconnectedAt: null,
           });
         }
+        
+        // Host reloaded, we need to announce our presence again so we reappear in their Lobby
+        if (myPlayer && !myPlayer.isHost && gameStatus === 'LOBBY') {
+          netRef.current?.sendToHost({
+            type: 'JOIN_REQUEST',
+            senderId: myPlayer.id,
+            payload: myPlayer,
+          });
+        }
         break;
       }
 
