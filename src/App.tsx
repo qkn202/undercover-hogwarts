@@ -492,14 +492,21 @@ export function App() {
           });
         }
 
-        // CRITICAL GUARD: If non-host player was previously in room roster and now removed, they were kicked
+        // RESILIENT RECOVERY GUARD: If non-host player is missing from received room roster, re-request join instead of self-kicking!
+        // True kicks are handled explicitly via the KICK_PLAYER broadcast event.
         if (effectivePlayer && !effectivePlayer.isHost) {
-          const wasInRoom = players.some((p) => p.id === effectivePlayer.id);
           const isStillInRoom = state.players.some((p) => p.id === effectivePlayer.id);
-          if (wasInRoom && !isStillInRoom) {
-            console.log('[Client] Detected removal from room roster in ROOM_STATE_SYNC');
-            cleanupAndExitToWelcome('Bạn đã bị chủ phòng mời ra khỏi phòng.', state.roomCode);
-            return;
+          if (!isStillInRoom) {
+            console.log('[Client] Missing from received ROOM_STATE_SYNC roster. Auto-requesting re-sync/rejoin from Host...');
+            netRef.current?.sendToHost({
+              type: 'JOIN_REQUEST',
+              senderId: effectivePlayer.id,
+              payload: effectivePlayer,
+            });
+            // If the game is already in progress, keep our player in the local roster so the screen does not blank out
+            if (state.status !== 'LOBBY') {
+              state.players = [...state.players, effectivePlayer];
+            }
           }
         }
 
@@ -730,31 +737,88 @@ export function App() {
       netRef.current.onPresenceSync = (presentPlayerIds) => {
         if (myPlayer?.isHost && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME')) {
           const presentIds = new Set(presentPlayerIds);
-          setPlayers((prev) => {
-            const updated = prev.filter(p => p.id === myPlayer.id || p.isAi || presentIds.has(p.id));
-            if (updated.length !== prev.length) {
-              console.log('[Host] Proactively evicting offline ghost players via sync event');
-              if (netRef.current) {
-                const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
-                netRef.current.broadcastRoomState({
-                  roomCode,
-                  hostId: myPlayer.id,
-                  status: latestStatus as GameStatus,
-                  players: updated,
-                  config,
-                  roundNumber,
-                });
-              }
+
+          // 1. Cancel eviction timers for any players who are currently present
+          let timersChanged = false;
+          lobbyDisconnectTimersRef.current.forEach((timer, playerId) => {
+            if (presentIds.has(playerId)) {
+              console.log(`[Host] Player ${playerId} returned to presence, cancelling eviction timer.`);
+              clearTimeout(timer);
+              lobbyDisconnectTimersRef.current.delete(playerId);
+              timersChanged = true;
             }
-            return updated;
           });
+
+          // 2. For players in lobby who are missing from presence, start a 2-minute grace timer (DO NOT immediately evict!)
+          setPlayers((prev) => {
+            prev.forEach((p) => {
+              if (p.id !== myPlayer.id && !p.isAi && !presentIds.has(p.id)) {
+                if (!lobbyDisconnectTimersRef.current.has(p.id)) {
+                  console.log(`[Host] Player ${p.name} (${p.id}) missing from presence. Starting 2-minute grace timer...`);
+                  const targetId = p.id;
+                  const timer = setTimeout(() => {
+                    lobbyDisconnectTimersRef.current.delete(targetId);
+                    setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+                    setPlayers((currentPlayers) => {
+                      const evicted = currentPlayers.filter((x) => x.id !== targetId);
+                      if (evicted.length !== currentPlayers.length && netRef.current) {
+                        console.log(`[Host] Grace period (2m) expired for ghost player ${targetId}. Evicting from lobby.`);
+                        const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
+                        netRef.current.broadcastRoomState({
+                          roomCode,
+                          hostId: myPlayer.id,
+                          status: latestStatus as GameStatus,
+                          players: evicted,
+                          config,
+                          roundNumber,
+                        });
+                      }
+                      return evicted;
+                    });
+                  }, 120000); // 2-minute grace period
+                  lobbyDisconnectTimersRef.current.set(p.id, timer);
+                  timersChanged = true;
+                }
+              }
+            });
+            return prev; // Never filter out players instantly!
+          });
+
+          if (timersChanged) {
+            setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+          }
         }
       };
 
       netRef.current.onPeerLeft = (peerId, playerId) => {
-        console.log('[Host] Peer presence left/dropped:', peerId, playerId);
-        // Note: Eviction is now handled instantly and safely by onPresenceSync.
-        // The leave event is just for logging.
+        const targetId = playerId || peerId;
+        console.log('[Host] Peer presence left/dropped:', targetId);
+        if (myPlayer?.isHost && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME') && targetId !== myPlayer.id) {
+          if (!lobbyDisconnectTimersRef.current.has(targetId)) {
+            console.log(`[Host] Starting 2m grace timer for departed peer ${targetId}`);
+            const timer = setTimeout(() => {
+              lobbyDisconnectTimersRef.current.delete(targetId);
+              setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+              setPlayers((currentPlayers) => {
+                const evicted = currentPlayers.filter((x) => x.id !== targetId);
+                if (evicted.length !== currentPlayers.length && netRef.current) {
+                  const latestStatus = gameStatusRef.current === 'WELCOME' ? 'LOBBY' : gameStatusRef.current;
+                  netRef.current.broadcastRoomState({
+                    roomCode,
+                    hostId: myPlayer.id,
+                    status: latestStatus as GameStatus,
+                    players: evicted,
+                    config,
+                    roundNumber,
+                  });
+                }
+                return evicted;
+              });
+            }, 120000); // 2-minute grace period
+            lobbyDisconnectTimersRef.current.set(targetId, timer);
+            setOfflinePlayerIds(Array.from(lobbyDisconnectTimersRef.current.keys()));
+          }
+        }
       };
     }
   });
@@ -1224,7 +1288,7 @@ export function App() {
     return () => clearInterval(healthInterval);
   }, [myPlayer, roomCode]);
 
-  // Host beforeunload listener: notify peers on true tab close and destroy connection
+  // Host beforeunload listener: notify peers on true tab close without killing connection prematurely
   useEffect(() => {
     const handleHostUnload = () => {
       if (myPlayer?.isHost && netRef.current) {
@@ -1242,40 +1306,37 @@ export function App() {
           senderId: myPlayer.id,
           payload: {
             disconnectedAt: now,
-            message: 'Chủ phòng đã đóng tab.',
+            message: 'Chủ phòng tạm thời gián đoạn kết nối.',
           },
         });
-        netRef.current.destroy();
       }
     };
 
     window.addEventListener('beforeunload', handleHostUnload);
-    // iOS Safari / Android Chrome typically use visibilitychange or pagehide which we cover above.
     return () => {
       window.removeEventListener('beforeunload', handleHostUnload);
     };
   }, [myPlayer]);
 
-  // Guest beforeunload listener: inform Host when closing tab so nick is immediately removed from lobby
+  // Guest beforeunload listener: inform Host on true tab close while in Lobby (NEVER on pagehide/tab-switch)
   useEffect(() => {
     const handleGuestUnload = () => {
-      if (myPlayer && !myPlayer.isHost && netRef.current) {
+      // Only inform host if client is truly unloading while in Lobby
+      // NEVER destroy connection here so mobile tab restore/bfcache can recover seamlessly!
+      if (myPlayer && !myPlayer.isHost && netRef.current && (gameStatus === 'LOBBY' || gameStatus === 'WELCOME')) {
         netRef.current.sendToHost({
           type: 'PLAYER_LEFT',
           senderId: myPlayer.id,
           payload: { playerId: myPlayer.id },
         });
-        netRef.current.destroy();
       }
     };
 
     window.addEventListener('beforeunload', handleGuestUnload);
-    window.addEventListener('pagehide', handleGuestUnload);
     return () => {
       window.removeEventListener('beforeunload', handleGuestUnload);
-      window.removeEventListener('pagehide', handleGuestUnload);
     };
-  }, [myPlayer]);
+  }, [myPlayer, gameStatus]);
 
   // 10-minute host disconnect countdown timer (clears session and evicts zombie room)
   useEffect(() => {
