@@ -104,7 +104,7 @@ export class NetworkManager {
       const timeout = setTimeout(() => {
         if (!isSettled) {
           isSettled = true;
-          this.onConnectionStatusChange?.('ERROR', 'Không thể tạo phòng. Vui lòng kiểm tra kết nối mạng!');
+          this.onConnectionStatusChange?.('ERROR', 'Đường truyền máy chủ đang gián đoạn. Đang tự động thử lại...');
           reject(new Error('Timeout connecting to Supabase realtime'));
         }
       }, 25000);
