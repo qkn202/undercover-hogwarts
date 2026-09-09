@@ -87,41 +87,36 @@ export function assignOptimalRoles(options: RoleAssignmentOptions): RoleAssignme
   const getStats = (id: string): PlayerRoleStats => {
     return (
       updatedHistory.get(id) || {
-        roundsSinceDeathEater: 10,
-        roundsSinceMrWhite: 10,
+        roundsSinceDeathEater: 1, // Start at 1 so new players are not artificially prioritized over existing ones
+        roundsSinceMrWhite: 1,
         totalDeathEaterCount: 0,
         totalMrWhiteCount: 0,
       }
     );
   };
 
-  // Step 1: Detect if we can strictly avoid picking players who were Death Eater last round
+  // Step 1: Strictly avoid picking players who were Death Eater in the immediate previous round
   const playersWhoWereNotDE = cardPlayers.filter(
     (p) => getStats(p.id).lastRole !== 'DEATH_EATER'
   );
   const canStrictlyAvoidRecentDE = playersWhoWereNotDE.length >= targetUndercover;
 
-  // Step 2: Calculate Efraimidis-Spirakis weighted score for each candidate:
+  // Strict non-consecutive rule:
+  // If we have enough players who weren't Death Eater last round, ONLY pick from them (100% guarantee 0 consecutive duplicates)
+  const dePool = canStrictlyAvoidRecentDE ? playersWhoWereNotDE : cardPlayers;
+
+  // Step 2: Calculate balanced weighted scores among eligible candidates
   // score = U ^ (1 / weight), where U ~ Uniform(0, 1)
-  const deCandidateScores = cardPlayers.map((player) => {
+  const deCandidateScores = dePool.map((player) => {
     const stats = getStats(player.id);
-    let weight = 100;
 
-    // Consecutive role cooldown penalty
-    if (stats.lastRole === 'DEATH_EATER') {
-      if (canStrictlyAvoidRecentDE) {
-        weight = 0.001; // Strongly deprioritize if enough other candidates exist
-      } else {
-        weight = 15; // Soft penalty for small rooms (3 players)
-      }
-    } else {
-      // Drought boost: each round without playing Death Eater gives +30 bonus weight
-      const droughtRounds = Math.min(stats.roundsSinceDeathEater, 8);
-      weight += droughtRounds * 30;
-
-      // Cumulative dampener: if player already played Death Eater multiple times, softly adjust
-      weight = Math.max(25, weight - stats.totalDeathEaterCount * 25);
-    }
+    // Soft balanced weighting:
+    // - Mild drought bonus (max +30) so everyone gets a turn eventually
+    // - Mild count dampener (max -20) so no one monopolizes the role
+    // Weight remains tightly bounded [80, 130] so selection stays unpredictable and natural
+    const droughtBonus = Math.min(stats.roundsSinceDeathEater, 3) * 10;
+    const countDampener = Math.min(stats.totalDeathEaterCount, 2) * 10;
+    const weight = Math.max(50, 100 + droughtBonus - countDampener);
 
     const u = Math.max(0.00001, secureRandom());
     const score = Math.pow(u, 1 / Math.max(0.1, weight));
@@ -133,23 +128,24 @@ export function assignOptimalRoles(options: RoleAssignmentOptions): RoleAssignme
   deCandidateScores.sort((a, b) => b.score - a.score);
 
   const deathEaters = deCandidateScores.slice(0, targetUndercover).map((c) => c.player);
-  const remainingAfterDE = deCandidateScores.slice(targetUndercover).map((c) => c.player);
+  const deSet = new Set(deathEaters.map((p) => p.id));
+  const remainingAfterDE = cardPlayers.filter((p) => !deSet.has(p.id));
 
-  // Step 3: Pick Mr. White among remaining candidates (if enabled)
+  // Step 3: Pick Mr. White among remaining candidates (if enabled, ensuring no consecutive Mr. White)
   let mrWhitePlayer: Player | undefined = undefined;
   if (targetMrWhite > 0 && remainingAfterDE.length > 0) {
-    const canAvoidRecentMrWhite = remainingAfterDE.some(
+    const playersWhoWereNotMW = remainingAfterDE.filter(
       (p) => getStats(p.id).lastRole !== 'MR_WHITE'
     );
+    const canAvoidRecentMrWhite = playersWhoWereNotMW.length >= targetMrWhite;
+    const mwPool = canAvoidRecentMrWhite ? playersWhoWereNotMW : remainingAfterDE;
 
-    const mrWhiteCandidates = remainingAfterDE.map((player) => {
+    const mrWhiteCandidates = mwPool.map((player) => {
       const stats = getStats(player.id);
-      let weight = 100;
-      if (stats.lastRole === 'MR_WHITE') {
-        weight = canAvoidRecentMrWhite ? 0.001 : 20;
-      } else {
-        weight += Math.min(stats.roundsSinceMrWhite, 8) * 25;
-      }
+      const droughtBonus = Math.min(stats.roundsSinceMrWhite, 3) * 10;
+      const countDampener = Math.min(stats.totalMrWhiteCount, 2) * 10;
+      const weight = Math.max(50, 100 + droughtBonus - countDampener);
+
       const u = Math.max(0.00001, secureRandom());
       const score = Math.pow(u, 1 / Math.max(0.1, weight));
       return { player, score };
@@ -161,7 +157,6 @@ export function assignOptimalRoles(options: RoleAssignmentOptions): RoleAssignme
 
   // Step 4: Construct final Role Map and update player stats
   const roleMap = new Map<string, Role>();
-  const deSet = new Set(deathEaters.map((p) => p.id));
   const mwId = mrWhitePlayer?.id;
 
   cardPlayers.forEach((p) => {
