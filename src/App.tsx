@@ -1578,79 +1578,129 @@ export function App() {
 
         {/* SCREEN 1: WELCOME & ROOM ENTRANCE */}
         {(gameStatus === 'WELCOME' || !myPlayer) && (
-          <div className="w-full max-w-md mx-auto flex flex-col gap-6 animate-fadeIn">
+          <div className="w-full max-w-md mx-auto flex flex-col gap-5 animate-fadeIn">
             {/* Title & Introduction */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[#c8aa6e] via-[#740001] to-[#120d18] p-0.5 shadow-2xl border border-[#f3d994]/50">
-                <div className="w-full h-full rounded-2xl bg-[#120d18] flex items-center justify-center text-3xl">
-                  ⚡
+            <div className="text-center relative">
+              <div className="relative inline-block mb-3">
+                <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-[#ffd875] via-[#740001] to-[#120a1c] p-[2px] shadow-[0_0_35px_rgba(200,170,110,0.35)]">
+                  <div className="w-full h-full rounded-[22px] bg-[#10081a] flex items-center justify-center text-4xl select-none filter drop-shadow">
+                    🧙‍♂️
+                  </div>
+                </div>
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#740001] border border-[#ffd875] text-[#ffd875] text-[10px] font-serif font-black tracking-widest uppercase shadow">
+                  HOGWARTS
                 </div>
               </div>
-              <h2 className="font-serif font-black text-2xl sm:text-3xl text-[#f3d994] tracking-wide">
+              <h2 className="font-cinzel font-black text-2xl sm:text-3xl tracking-wide gold-gradient-text">
                 HỌC VIỆN HOGWARTS
               </h2>
-              <p className="text-xs text-stone-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                Trò chơi tìm kiếm Gián Điệp (Undercover) dành cho 3 - 10 phù thủy. Phát thẻ bí mật trực tiếp lên từng điện thoại!
+              <p className="text-xs text-[#c8aa6e]/90 mt-1 max-w-xs mx-auto leading-relaxed font-medium">
+                Cuộc đấu trí ma thuật giữa <span className="text-[#ffd875] font-semibold">Học Sinh</span> và <span className="text-red-400 font-semibold">Tử Thần Thực Tử</span>.
               </p>
             </div>
 
-            {/* Profile Setup Box */}
-            <div className="bg-[#181122]/90 rounded-2xl p-5 border border-[#c8aa6e]/40 shadow-xl flex flex-col gap-4">
+            {/* Profile Setup Box — Platform 9¾ Ticket */}
+            <div className="glass-panel-gold rounded-3xl p-5 shadow-2xl flex flex-col gap-4 relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[#c8aa6e]/30 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg select-none">🎫</span>
+                  <span className="text-xs font-cinzel font-bold text-[#ffd875] tracking-wider uppercase">
+                    Vé Nhập Học Platform 9¾
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#c8aa6e] bg-[#211236] px-2 py-0.5 rounded-full border border-[#c8aa6e]/30">
+                  Hogwarts Express
+                </span>
+              </div>
+
               <div>
-                <label className="text-xs font-semibold text-[#ffd875] uppercase block mb-1.5">
-                  Tên Phù Thủy Của Bạn
+                <label className="text-[11px] font-serif font-semibold text-[#c8aa6e] uppercase tracking-wider block mb-1.5">
+                  Danh Xưng Phù Thủy Của Bạn
                 </label>
-                <input
-                  type="text"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  maxLength={18}
-                  placeholder="Nhập tên của bạn..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#100b17] border border-stone-700 text-sm text-stone-100 focus:outline-none focus:border-[#c8aa6e] shadow-inner font-medium"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => {
+                      setPlayerName(e.target.value);
+                      localStorage.setItem('hogw_player_name', e.target.value);
+                    }}
+                    maxLength={20}
+                    placeholder="Nhập tên của bạn..."
+                    className="w-full pl-3.5 pr-10 py-3 rounded-xl bg-[#0c0614] border border-[#c8aa6e]/50 text-sm font-serif font-bold text-[#f3efe6] focus:outline-none focus:border-[#ffd875] focus:ring-1 focus:ring-[#ffd875] shadow-inner"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-base select-none opacity-80">
+                    🪄
+                  </span>
+                </div>
+
+                {/* Quick Wizard Avatars / Names */}
+                <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                  <span className="text-[10px] text-stone-400 font-serif mr-1">Gợi ý:</span>
+                  {[
+                    { label: 'Harry', name: 'Harry Potter' },
+                    { label: 'Hermione', name: 'Hermione Granger' },
+                    { label: 'Ron', name: 'Ron Weasley' },
+                    { label: 'Draco', name: 'Draco Malfoy' },
+                    { label: 'Luna', name: 'Luna Lovegood' },
+                  ].map((wiz) => (
+                    <button
+                      key={wiz.label}
+                      type="button"
+                      onClick={() => {
+                        setPlayerName(wiz.name);
+                        localStorage.setItem('hogw_player_name', wiz.name);
+                        sound.playButtonChime();
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-[#241538] hover:bg-[#392157] text-[#ffd875] text-[10px] font-serif border border-[#c8aa6e]/30 hover:border-[#ffd875] transition-all cursor-pointer active:scale-95"
+                    >
+                      {wiz.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-
-            {/* Entrance Buttons */}
-            <div className="flex flex-col gap-3">
+            {/* Entrance Actions */}
+            <div className="flex flex-col gap-3.5">
               {/* Create Room Button */}
               <button
                 onClick={handleCreateRoom}
                 disabled={connStatus === 'CONNECTING'}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#740001] via-[#a31a1a] to-[#740001] hover:from-[#8c0304] hover:to-[#b01e1e] text-amber-100 font-serif font-bold text-sm sm:text-base tracking-wider border-2 border-amber-500/50 shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8a1c14] to-[#740001] hover:from-[#8c0304] hover:to-[#a11a1a] text-[#ffd875] font-cinzel font-bold text-sm sm:text-base tracking-wider border-2 border-[#ffd875]/70 shadow-[0_8px_25px_rgba(116,0,1,0.5)] flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group"
               >
-                <Crown size={18} className="text-[#f3d994]" />
+                <div className="absolute inset-0 shimmer-gold opacity-30 pointer-events-none" />
+                <Crown size={20} className="text-[#ffd875] filter drop-shadow" />
                 <span>TẠO PHÒNG MỚI (LÀM HOST)</span>
               </button>
 
-              {/* Join Room Box */}
-              <div className="bg-[#140e1f] p-3 rounded-2xl border border-stone-800 flex items-center gap-2">
+              {/* Join Room Portal Box */}
+              <div className="glass-panel p-3 rounded-2xl flex items-center gap-2 border border-[#c8aa6e]/40 shadow-xl">
                 <input
                   type="text"
                   value={inputRoomCode}
                   onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
                   maxLength={6}
                   placeholder="NHẬP MÃ PHÒNG (VD: HOGW)"
-                  className="flex-1 px-3 py-2.5 rounded-xl bg-[#0d0914] border border-stone-700 text-xs font-mono font-bold tracking-widest text-[#f3d994] uppercase placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-[#c8aa6e]"
+                  className="flex-1 px-4 py-3 rounded-xl bg-[#0b0612] border border-stone-800 text-xs font-mono font-black tracking-widest text-[#ffd875] uppercase placeholder:normal-case placeholder:font-serif placeholder:font-normal placeholder:text-stone-500 focus:outline-none focus:border-[#ffd875] shadow-inner"
                 />
                 <button
                   onClick={handleJoinRoom}
                   disabled={connStatus === 'CONNECTING'}
-                  className="px-4 py-2.5 rounded-xl bg-[#2e1c45] hover:bg-[#402761] text-[#f3d994] font-serif font-bold text-xs border border-[#c8aa6e]/40 flex items-center gap-1.5 transition-all"
+                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#2a1742] to-[#3a205a] hover:from-[#3a205a] hover:to-[#4e2c7a] text-[#ffd875] font-cinzel font-bold text-xs sm:text-sm border border-[#ffd875]/50 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-lg shrink-0"
                 >
-                  <LogIn size={15} />
-                  <span>Vào</span>
+                  <LogIn size={16} />
+                  <span>VÀO PHÒNG</span>
                 </button>
               </div>
 
               {/* Offline fallback mode */}
-              <div className="text-center pt-2">
+              <div className="text-center pt-1">
                 <button
                   onClick={() => setIsPassAndPlayOpen(true)}
-                  className="text-xs text-stone-400 hover:text-[#ffd875] underline decoration-dotted transition-colors"
+                  className="text-xs text-[#c8aa6e]/80 hover:text-[#ffd875] underline decoration-dotted transition-colors cursor-pointer font-medium"
                 >
-                  📱 Hoặc chơi chung trên 1 máy điện thoại (Chuyền tay nhau)
+                  📱 Hoặc chơi chung trên 1 máy điện thoại (Pass & Play)
                 </button>
               </div>
             </div>
@@ -1774,70 +1824,74 @@ export function App() {
               />
             ) : (
               gameStatus === 'REVEALED' && (
-                <div className="w-full max-w-md bg-gradient-to-b from-[#1f142e] via-[#160d23] to-[#10081a] p-5 sm:p-6 rounded-2xl border-2 border-[#ffd875]/60 text-center animate-fadeIn shadow-2xl flex flex-col items-center gap-4">
+                <div className="w-full max-w-md glass-panel-gold p-5 sm:p-6 rounded-3xl border-2 border-[#ffd875]/70 text-center animate-fadeIn shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col items-center gap-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
                   {/* Victory Banner */}
                   {winner ? (
                     <div
-                      className={`w-full p-4 rounded-2xl border-2 text-center shadow-xl flex flex-col items-center gap-1.5 animate-bounce ${
+                      className={`w-full p-5 rounded-2xl border-2 text-center shadow-2xl flex flex-col items-center gap-2 relative overflow-hidden ${
                         winner === 'STUDENT'
-                          ? 'bg-gradient-to-r from-amber-950 via-amber-900 to-amber-950 border-amber-400 text-amber-200'
+                          ? 'bg-gradient-to-b from-[#3d0a08] via-[#240605] to-[#140303] border-[#ffd875] text-[#ffe699]'
                           : winner === 'DEATH_EATER'
-                          ? 'bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-emerald-400 text-emerald-200'
-                          : 'bg-gradient-to-r from-purple-950 via-purple-900 to-purple-950 border-purple-400 text-purple-200'
+                          ? 'bg-gradient-to-b from-[#0a2e18] via-[#051a0d] to-[#030d07] border-emerald-400 text-emerald-100'
+                          : 'bg-gradient-to-b from-[#280c3d] via-[#160624] to-[#0c0314] border-purple-400 text-purple-100'
                       }`}
                     >
-                      <span className="text-3xl">
-                        {winner === 'STUDENT' ? '⚡ 🏆' : winner === 'DEATH_EATER' ? '🐍 💀' : '👻 🔮'}
-                      </span>
-                      <h3 className="font-serif font-black text-xl sm:text-2xl tracking-wide">
+                      <div className="text-4xl filter drop-shadow animate-bounce">
+                        {winner === 'STUDENT' ? '⚡ 🏆 ⚡' : winner === 'DEATH_EATER' ? '🐍 💀 🐍' : '👻 🔮 👻'}
+                      </div>
+                      <h3 className="font-cinzel font-black text-xl sm:text-2xl tracking-wider uppercase">
                         {winner === 'STUDENT'
                           ? 'PHE HỌC SINH CHIẾN THẮNG!'
                           : winner === 'DEATH_EATER'
                           ? 'TỬ THẦN THỰC TỬ THẮNG CUỘC!'
-                          : 'KẺ KHÔNG TÊN LẬT KÈO CHIẾN THẮNG!'}
+                          : 'KẺ KHÔNG TÊN LẬT KÈO THÀNH CÔNG!'}
                       </h3>
-                      <p className="text-xs opacity-90 max-w-sm leading-relaxed">
+                      <p className="text-xs opacity-95 max-w-sm leading-relaxed font-medium">
                         {winner === 'STUDENT'
-                          ? 'Các phù thủy chân chính đã loại sạch Tử Thần và bảo vệ Hogwarts!'
+                          ? 'Các phù thủy chân chính đã vạch trần toàn bộ kẻ phản bội và bảo vệ an toàn cho Hogwarts!'
                           : winner === 'DEATH_EATER'
-                          ? 'Tử Thần Thực Tử đã ẩn mình hoàn hảo và áp đảo toàn trường!'
-                          : 'Mr. White đã giải mã chính xác từ ngữ ma thuật của phe Học Sinh!'}
+                          ? 'Tử Thần Thực Tử đã ẩn mình hoàn hảo, thao túng bàn chơi và chiếm thế thượng phong!'
+                          : 'Mr. White đã giải mã chính xác mật từ của Học Sinh trong gang tấc!'}
                       </p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-purple-900/40 border border-[#ffd875]/40 flex items-center justify-center text-3xl mb-2 shadow-inner">
-                        🏆
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ffd875] to-[#740001] p-0.5 shadow-lg mb-2">
+                        <div className="w-full h-full rounded-[14px] bg-[#120a1c] flex items-center justify-center text-3xl">
+                          🏆
+                        </div>
                       </div>
-                      <h4 className="font-serif font-bold text-xl sm:text-2xl text-[#f3d994] tracking-wide">
+                      <h4 className="font-cinzel font-black text-xl sm:text-2xl text-[#ffd875] tracking-wide">
                         Ván Đấu Đã Kết Thúc!
                       </h4>
-                      <p className="text-xs text-stone-300 mt-1">
-                        Quản trò đã mở toàn bộ kết quả vòng đấu #{roundNumber}
+                      <p className="text-xs text-[#c8aa6e] mt-1">
+                        Quản trò đã công bố toàn bộ danh tính vòng đấu #{roundNumber}
                       </p>
                     </div>
                   )}
 
                   {/* Revealed Word Pair */}
                   {currentPair && (
-                    <div className="w-full bg-[#0c0812]/90 rounded-xl p-3.5 border border-[#c8aa6e]/40 text-left shadow-inner">
-                      <span className="text-[11px] text-[#ffd875] font-semibold uppercase tracking-wider block mb-2 text-center font-serif">
-                        Cặp Từ Bí Mật Vòng Này
+                    <div className="w-full bg-[#0d0714]/90 rounded-2xl p-4 border border-[#ffd875]/40 text-left shadow-inner">
+                      <span className="text-[11px] text-[#ffd875] font-cinzel font-bold uppercase tracking-widest block mb-2.5 text-center">
+                        📜 Cặp Từ Bí Mật Vòng Này
                       </span>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-[#1f152b] p-2.5 rounded-lg border border-amber-500/30">
-                          <span className="text-[10px] text-amber-400 font-semibold block mb-0.5">
+                      <div className="grid grid-cols-2 gap-2.5 text-xs">
+                        <div className="bg-gradient-to-b from-[#241312] to-[#140a0a] p-3 rounded-xl border border-amber-500/40 shadow-sm">
+                          <span className="text-[10px] text-[#ffd875] font-serif font-bold uppercase tracking-wider block mb-1">
                             ⚡ Học Sinh:
                           </span>
-                          <span className="font-bold text-[#f3d994] text-sm break-words">
+                          <span className="font-serif font-black text-[#fff2be] text-base break-words">
                             {currentPair.studentWord}
                           </span>
                         </div>
-                        <div className="bg-[#121c17] p-2.5 rounded-lg border border-emerald-500/30">
-                          <span className="text-[10px] text-emerald-400 font-semibold block mb-0.5">
+                        <div className="bg-gradient-to-b from-[#0e2115] to-[#07130b] p-3 rounded-xl border border-emerald-500/40 shadow-sm">
+                          <span className="text-[10px] text-emerald-400 font-serif font-bold uppercase tracking-wider block mb-1">
                             🐍 Tử Thần:
                           </span>
-                          <span className="font-bold text-emerald-300 text-sm break-words">
+                          <span className="font-serif font-black text-emerald-200 text-base break-words">
                             {currentPair.undercoverWord}
                           </span>
                         </div>
@@ -1847,8 +1901,8 @@ export function App() {
 
                   {/* Player Roster Breakdown */}
                   {players.length > 0 && (
-                    <div className="w-full bg-[#0c0812]/80 rounded-xl p-3 border border-stone-800 text-left max-h-48 overflow-y-auto custom-scrollbar">
-                      <span className="text-[10px] text-stone-400 uppercase tracking-wider font-semibold block mb-2 text-center font-serif">
+                    <div className="w-full bg-[#0a0512]/90 rounded-2xl p-3.5 border border-stone-800 text-left max-h-56 overflow-y-auto custom-scrollbar shadow-inner">
+                      <span className="text-[10px] text-[#c8aa6e] uppercase tracking-widest font-cinzel font-bold block mb-2 text-center">
                         Danh Tính & Vai Trò Các Phù Thủy
                       </span>
                       <div className="flex flex-col gap-1.5">
@@ -1859,48 +1913,48 @@ export function App() {
                           return (
                             <div
                               key={p.id}
-                              className={`flex items-center justify-between p-2 rounded-lg text-xs border transition-colors ${
+                              className={`flex items-center justify-between p-2.5 rounded-xl text-xs border transition-all ${
                                 p.isEliminated
-                                  ? 'bg-stone-900/60 border-stone-800 text-stone-500 line-through opacity-70'
+                                  ? 'bg-stone-900/50 border-stone-800 text-stone-500 line-through opacity-70'
                                   : isSpectator
-                                  ? 'bg-[#140e1e]/60 border-stone-800 text-stone-400'
+                                  ? 'bg-[#150e20]/60 border-stone-800 text-stone-400'
                                   : isDeathEater
-                                  ? 'bg-red-950/40 border-red-800/40 text-red-200'
+                                  ? 'bg-gradient-to-r from-red-950/60 to-red-900/40 border-red-700/50 text-red-200 shadow-sm'
                                   : isMrWhite
-                                  ? 'bg-purple-950/40 border-purple-800/40 text-purple-200'
-                                  : 'bg-[#1a1224] border-stone-800 text-stone-300'
+                                  ? 'bg-gradient-to-r from-purple-950/60 to-purple-900/40 border-purple-700/50 text-purple-200 shadow-sm'
+                                  : 'bg-gradient-to-r from-[#1e132c]/80 to-[#170e22]/80 border-amber-600/30 text-[#f3efe6]'
                               }`}
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {typeof p.speakingOrder === 'number' && (
-                                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-[#ffd875] border border-amber-500/40 text-[10px] font-bold font-mono flex items-center justify-center shrink-0">
+                                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-[#ffd875] border border-amber-500/40 text-[10px] font-black font-mono flex items-center justify-center shrink-0">
                                     {p.speakingOrder}
                                   </span>
                                 )}
-                                <span className="font-medium text-stone-200">
+                                <span className="font-serif font-bold truncate">
                                   {p.name}
                                 </span>
                                 {p.id === myPlayer.id && (
-                                  <span className="text-[10px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-[#ffd875] border border-amber-500/40 font-bold shrink-0">
                                     Bạn
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1.5 font-medium">
+                              <div className="flex items-center gap-1.5 font-medium shrink-0 ml-2">
                                 {isSpectator ? (
-                                  <span className="px-2 py-0.5 rounded bg-stone-800 text-stone-300 text-[11px] font-medium border border-stone-700">
+                                  <span className="px-2 py-0.5 rounded-md bg-stone-800 text-stone-300 text-[11px] font-medium border border-stone-700">
                                     👀 Khán Giả
                                   </span>
                                 ) : isDeathEater ? (
-                                  <span className="px-2 py-0.5 rounded bg-red-900/80 text-red-300 text-[11px] font-serif font-bold border border-red-700/60">
+                                  <span className="px-2.5 py-0.5 rounded-md bg-red-950 text-red-300 text-[11px] font-serif font-bold border border-red-600/70">
                                     🐍 Tử Thần
                                   </span>
                                 ) : isMrWhite ? (
-                                  <span className="px-2 py-0.5 rounded bg-purple-900/80 text-purple-300 text-[11px] font-serif font-bold border border-purple-700/60">
+                                  <span className="px-2.5 py-0.5 rounded-md bg-purple-950 text-purple-300 text-[11px] font-serif font-bold border border-purple-600/70">
                                     👻 Kẻ Không Tên
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 text-[11px] font-serif font-bold border border-amber-700/50">
+                                  <span className="px-2.5 py-0.5 rounded-md bg-amber-950/90 text-[#ffd875] text-[11px] font-serif font-bold border border-amber-600/60">
                                     ⚡ Học Sinh
                                   </span>
                                 )}
@@ -1916,13 +1970,13 @@ export function App() {
                   <div className="w-full flex flex-col gap-2 pt-2 border-t border-stone-800/80">
                     <button
                       onClick={handleLeaveRoom}
-                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-950 via-red-900 to-red-950 hover:from-red-900 hover:to-red-800 text-red-200 hover:text-white font-serif font-bold text-sm shadow-xl border border-red-700/60 transition-all flex items-center justify-center gap-2 active:scale-98"
+                      className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-950 via-red-900 to-red-950 hover:from-red-900 hover:to-red-800 text-red-100 hover:text-white font-cinzel font-bold text-sm shadow-xl border border-red-600/70 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
                     >
                       <LogOut size={16} />
-                      <span>Rời Phòng & Về Trang Chủ</span>
+                      <span>RỜI PHÒNG & VỀ TRANG CHỦ</span>
                     </button>
-                    <p className="text-[11px] text-stone-400 italic leading-relaxed">
-                      💡 Bạn có thể tự do bấm <strong>Rời Phòng</strong> ngay lập tức để thoát ra mà không cần đợi Quản trò thao tác.
+                    <p className="text-[11px] text-[#c8aa6e]/80 italic leading-relaxed">
+                      💡 Bạn có thể tự do bấm <strong>Rời Phòng</strong> bất cứ lúc nào mà không cần chờ Quản trò.
                     </p>
                   </div>
                 </div>

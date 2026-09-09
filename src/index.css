@@ -3,13 +3,21 @@
 @layer base {
   :root {
     --hogwarts-gold: #c8aa6e;
-    --hogwarts-dark: #0f0a17;
-    --hogwarts-parchment: #1a1226;
+    --hogwarts-gold-bright: #ffd875;
+    --hogwarts-gold-light: #fff0b3;
+    --hogwarts-dark: #07050d;
+    --hogwarts-surface: #120a1c;
+    --hogwarts-surface-elevated: #1a0f28;
+    --gryffindor-red: #740001;
+    --gryffindor-crimson: #8a1c14;
+    --slytherin-green: #1a472a;
+    --ravenclaw-blue: #0e1a40;
+    --hufflepuff-gold: #ecb939;
   }
 
   body {
-    background-color: #0c0814;
-    color: #e6e4e1;
+    background-color: #07050d;
+    color: #f3efe6;
     font-family: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -18,9 +26,10 @@
     margin: 0;
     padding: 0;
     background-image: 
-      radial-gradient(circle at 50% 0%, rgba(116, 0, 1, 0.15) 0%, transparent 60%),
-      radial-gradient(circle at 90% 90%, rgba(26, 71, 42, 0.12) 0%, transparent 50%),
-      radial-gradient(circle at 10% 90%, rgba(14, 26, 64, 0.15) 0%, transparent 50%);
+      radial-gradient(ellipse at 50% -20%, rgba(138, 28, 20, 0.25) 0%, transparent 65%),
+      radial-gradient(ellipse at 85% 85%, rgba(26, 71, 42, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 15% 90%, rgba(14, 26, 64, 0.22) 0%, transparent 55%),
+      radial-gradient(circle at 50% 50%, rgba(200, 170, 110, 0.03) 0%, transparent 70%);
     background-attachment: fixed;
   }
 
@@ -28,13 +37,152 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative;
+  }
+
+  /* Subtle ambient magic dust layer */
+  #root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 235, 170, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.35;
+    z-index: 1;
   }
 }
 
+/* Typography Helpers */
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.05em;
+}
+
+.font-serif {
+  font-family: 'Cinzel', 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  letter-spacing: 0.03em;
+}
+
+/* Gold Gradient Text */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #fff2be 0%, #ffd875 45%, #c8aa6e 80%, #9e7f42 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.gold-gradient-text-subtle {
+  background: linear-gradient(135deg, #fcedc5 0%, #e2c079 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Glassmorphic Cards & Panels */
+.glass-panel {
+  background: rgba(18, 10, 28, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(200, 170, 110, 0.35);
+  box-shadow: 
+    0 12px 36px -4px rgba(0, 0, 0, 0.7),
+    0 4px 12px 0 rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 235, 170, 0.2);
+}
+
+.glass-panel-gold {
+  background: linear-gradient(165deg, rgba(32, 18, 50, 0.9) 0%, rgba(16, 9, 26, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 216, 117, 0.5);
+  box-shadow: 
+    0 16px 40px -8px rgba(0, 0, 0, 0.8),
+    0 0 30px -4px rgba(200, 170, 110, 0.25),
+    inset 0 1px 2px 0 rgba(255, 240, 190, 0.3);
+}
+
+.glass-panel-crimson {
+  background: linear-gradient(165deg, rgba(80, 10, 15, 0.85) 0%, rgba(25, 6, 15, 0.95) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(230, 80, 60, 0.4);
+  box-shadow: 
+    0 16px 40px -8px rgba(0, 0, 0, 0.8),
+    0 0 25px -4px rgba(138, 28, 20, 0.35),
+    inset 0 1px 2px 0 rgba(255, 150, 130, 0.2);
+}
+
+/* Tactile 3D Wax Seal */
+.wax-seal {
+  background: radial-gradient(circle at 35% 30%, #b3261a 0%, #740001 55%, #3d0202 100%);
+  border: 3px solid #ffd875;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(116, 0, 1, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.6);
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.wax-seal::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 1px dashed rgba(200, 170, 110, 0.35);
+  pointer-events: none;
+}
+
+.wax-seal:hover {
+  transform: scale(1.04) rotate(-2deg);
+  box-shadow: 
+    0 12px 30px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(255, 216, 117, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+/* Shimmer Scanning Animation */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 235, 170, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: goldShimmer 3s infinite linear;
+}
+
+/* Pulsing Rune Aura */
+@keyframes runePulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(200, 170, 110, 0.2), inset 0 0 10px rgba(200, 170, 110, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 216, 117, 0.45), inset 0 0 20px rgba(255, 216, 117, 0.2);
+  }
+}
+
+.rune-glow {
+  animation: runePulse 2.8s ease-in-out infinite;
+}
+
+/* Keyframes */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -43,22 +191,23 @@
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom Scrollbar for parchment lists */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #120d1a;
+  background: #0d0816;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #342250;
+  background: #2f1d47;
   border-radius: 4px;
+  border: 1px solid rgba(200, 170, 110, 0.2);
 }
 
 ::-webkit-scrollbar-thumb:hover {

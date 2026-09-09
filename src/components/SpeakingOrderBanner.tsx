@@ -73,24 +73,24 @@ export const SpeakingOrderBanner: React.FC<SpeakingOrderBannerProps> = ({
   const canControlTurn = isHost || isMyTurn;
 
   return (
-    <div className="w-full max-w-md mx-auto bg-gradient-to-b from-[#1c1328] via-[#140c1e] to-[#0d0714] rounded-2xl border border-[#ffd875]/40 p-4 shadow-xl text-stone-200 animate-fadeIn relative overflow-hidden">
+    <div className="w-full max-w-md mx-auto glass-panel rounded-2xl border border-[#ffd875]/40 p-4 shadow-xl text-stone-200 animate-fadeIn relative overflow-hidden">
       {/* Subtle magical glowing background accent */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-2.5 border-b border-stone-800/80 mb-3">
+      <div className="flex items-center justify-between pb-2.5 border-b border-[#c8aa6e]/20 mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[#ffd875]">
-            <Mic size={15} />
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875]">
+            <Mic size={16} />
           </div>
           <div>
-            <h4 className="font-serif font-bold text-xs sm:text-sm text-[#f3d994] flex items-center gap-1.5">
+            <h4 className="font-cinzel font-bold text-xs sm:text-sm text-[#ffd875] flex items-center gap-1.5">
               <span>THỨ TỰ PHÁT BIỂU</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-900/60 text-amber-200 border border-amber-500/30 font-sans">
+              <span className="text-[10px] px-2 py-0.2 rounded-full bg-[#2a1740] text-[#ffd875] border border-[#ffd875]/30 font-sans">
                 Vòng #{roundNumber}
               </span>
             </h4>
-            <p className="text-[10px] text-stone-400">
+            <p className="text-[10px] text-[#c8aa6e]/80">
               Đồng bộ trực tiếp trên điện thoại cả phòng
             </p>
           </div>

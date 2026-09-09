@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HelpCircle, BookOpen, Volume2, VolumeX, Smartphone, Copy, Check, LogOut, Menu, X } from 'lucide-react';
+import { HelpCircle, BookOpen, Volume2, VolumeX, Smartphone, Copy, Check, LogOut, Menu, X, Sparkles } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface HeaderProps {
@@ -76,41 +76,51 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="w-full bg-[#120d18]/95 backdrop-blur-md border-b border-[#c8aa6e]/30 px-3 py-2 sm:px-4 sm:py-3 sticky top-0 z-40 shadow-lg">
-      <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
-        {/* Logo & Title */}
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#c8aa6e] to-[#740001] flex items-center justify-center shadow-inner border border-[#f3d994]/40 shrink-0">
-            <span className="text-base sm:text-xl select-none">🧙‍♂️</span>
+    <header className="w-full bg-[#0d0716]/90 backdrop-blur-xl border-b border-[#c8aa6e]/35 px-3 py-2 sm:px-5 sm:py-2.5 sticky top-0 z-40 shadow-[0_8px_30px_rgb(0,0,0,0.6)]">
+      <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+        {/* Hogwarts Royal Crest & Brand */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative group cursor-pointer">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#ffd875] via-[#8a1c14] to-[#120a1c] p-[1.5px] shadow-[0_0_15px_rgba(200,170,110,0.3)] transition-transform group-hover:scale-105 shrink-0">
+              <div className="w-full h-full rounded-[10px] bg-[#120a1c] flex items-center justify-center">
+                <span className="text-lg sm:text-2xl select-none filter drop-shadow">🧙‍♂️</span>
+              </div>
+            </div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#ffd875] border border-[#740001] flex items-center justify-center pointer-events-none">
+              <Sparkles size={7} className="text-[#740001]" />
+            </div>
           </div>
+
           <div className="min-w-0">
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <h1 className="font-serif font-bold text-sm sm:text-lg md:text-xl text-[#f3d994] tracking-wide leading-tight drop-shadow-sm truncate">
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-cinzel font-black text-sm sm:text-lg md:text-xl tracking-wider leading-tight gold-gradient-text drop-shadow">
                 UNDERCOVER
               </h1>
-              <span className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded bg-[#740001]/80 text-[#ffd875] border border-[#c8aa6e]/40 font-mono font-semibold shrink-0">
+              <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-[#740001] to-[#8a1c14] text-[#ffd875] border border-[#ffd875]/50 font-serif font-bold tracking-wide shadow-sm shrink-0">
                 Hogwarts
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#a49a88] hidden sm:block truncate">
+            <p className="text-[10px] sm:text-[11px] text-[#c8aa6e]/80 hidden sm:block truncate font-medium">
               Học Sinh vs Tử Thần Thực Tử & Kẻ Không Tên
             </p>
           </div>
         </div>
 
-        {/* Room Code Badge (if active) */}
+        {/* Room Code Badge (if active in room) */}
         {roomCode && (
-          <div className="flex items-center gap-1 sm:gap-1.5 bg-[#1f1629] px-2 sm:px-3 py-1 rounded-full border border-[#c8aa6e]/40 shadow-sm shrink-0">
-            <span className="text-[10px] sm:text-xs text-[#a49a88] hidden xs:inline">Phòng:</span>
-            <span className="font-mono font-bold text-xs sm:text-sm tracking-wider sm:tracking-widest text-[#f3d994]">
+          <div className="flex items-center gap-1.5 bg-gradient-to-r from-[#1c102b] via-[#26143c] to-[#1c102b] px-2.5 sm:px-3.5 py-1 rounded-full border border-[#ffd875]/40 shadow-[0_0_15px_rgba(200,170,110,0.15)] shrink-0">
+            <span className="text-[10px] sm:text-xs text-[#c8aa6e] hidden xs:inline font-serif uppercase tracking-wider">
+              Phòng:
+            </span>
+            <span className="font-mono font-black text-xs sm:text-sm tracking-widest text-[#ffd875] drop-shadow">
               {roomCode}
             </span>
             <button
               onClick={handleCopyCode}
               title="Sao chép mã phòng"
-              className="text-[#c8aa6e] hover:text-[#ffd875] transition-colors p-0.5 sm:p-1"
+              className="text-[#c8aa6e] hover:text-[#ffd875] transition-all p-1 rounded-md hover:bg-[#341b52] cursor-pointer"
             >
-              {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+              {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
             </button>
           </div>
         )}
@@ -120,25 +130,25 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenPassAndPlay}
             title="Chơi chung 1 máy (Pass & Play)"
-            className="p-2 rounded-lg bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border border-[#c8aa6e]/30 transition-all flex items-center gap-1 text-xs"
+            className="px-3 py-1.5 rounded-xl bg-[#1d122b]/90 text-[#e6d0a1] hover:text-[#ffd875] hover:bg-[#2e1c45] border border-[#c8aa6e]/30 hover:border-[#ffd875]/60 transition-all flex items-center gap-1.5 text-xs font-serif font-semibold shadow-sm cursor-pointer active:scale-95"
           >
-            <Smartphone size={16} />
-            <span className="font-medium">1 Máy</span>
+            <Smartphone size={15} className="text-[#ffd875]" />
+            <span>1 Máy</span>
           </button>
 
           <button
             onClick={onOpenCustomWords}
-            title="Bộ từ tùy chỉnh"
-            className="p-2 rounded-lg bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border border-[#c8aa6e]/30 transition-all flex items-center gap-1 text-xs"
+            title="Bộ từ vựng tùy chỉnh"
+            className="px-3 py-1.5 rounded-xl bg-[#1d122b]/90 text-[#e6d0a1] hover:text-[#ffd875] hover:bg-[#2e1c45] border border-[#c8aa6e]/30 hover:border-[#ffd875]/60 transition-all flex items-center gap-1.5 text-xs font-serif font-semibold shadow-sm cursor-pointer active:scale-95"
           >
-            <BookOpen size={16} />
-            <span className="font-medium">Từ Vựng</span>
+            <BookOpen size={15} className="text-[#ffd875]" />
+            <span>Từ Vựng</span>
           </button>
 
           <button
             onClick={onOpenHowToPlay}
             title="Luật chơi & Hướng dẫn"
-            className="p-2 rounded-lg bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border border-[#c8aa6e]/30 transition-all"
+            className="p-2 rounded-xl bg-[#1d122b]/90 text-[#c8aa6e] hover:text-[#ffd875] hover:bg-[#2e1c45] border border-[#c8aa6e]/30 hover:border-[#ffd875]/60 transition-all cursor-pointer active:scale-95"
           >
             <HelpCircle size={17} />
           </button>
@@ -146,18 +156,18 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={handleToggleSound}
             title={soundOn ? 'Tắt âm thanh' : 'Bật âm thanh'}
-            className="p-2 rounded-lg bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border border-[#c8aa6e]/30 transition-all"
+            className="p-2 rounded-xl bg-[#1d122b]/90 text-[#c8aa6e] hover:text-[#ffd875] hover:bg-[#2e1c45] border border-[#c8aa6e]/30 hover:border-[#ffd875]/60 transition-all cursor-pointer active:scale-95"
           >
-            {soundOn ? <Volume2 size={17} /> : <VolumeX size={17} className="text-stone-500" />}
+            {soundOn ? <Volume2 size={17} className="text-[#ffd875]" /> : <VolumeX size={17} className="text-stone-500" />}
           </button>
 
           {onLeaveRoom && roomCode && (
             <button
               onClick={onLeaveRoom}
               title="Rời khỏi phòng hiện tại"
-              className="px-2.5 py-1.5 rounded-lg bg-red-950/70 text-red-300 hover:bg-red-900 hover:text-white border border-red-800/50 transition-all flex items-center gap-1 text-xs font-medium ml-1"
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-950 to-red-900 text-red-200 hover:text-white hover:from-red-900 hover:to-red-800 border border-red-700/60 shadow-md transition-all flex items-center gap-1.5 text-xs font-serif font-bold ml-1 cursor-pointer active:scale-95"
             >
-              <LogOut size={14} />
+              <LogOut size={13} />
               <span>Rời</span>
             </button>
           )}
@@ -165,26 +175,26 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Action Controls (< md) */}
         <div className="flex md:hidden items-center gap-1.5 shrink-0">
-          {/* Quick Sound Toggle on Mobile */}
+          {/* Sound Toggle */}
           <button
             onClick={handleToggleSound}
             title={soundOn ? 'Tắt âm thanh' : 'Bật âm thanh'}
-            className="p-2 rounded-lg bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border border-[#c8aa6e]/30 transition-all active:scale-95"
+            className="p-2 rounded-xl bg-[#1d122b] text-[#c8aa6e] hover:text-[#ffd875] border border-[#c8aa6e]/30 transition-all active:scale-95"
           >
-            {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} className="text-stone-500" />}
+            {soundOn ? <Volume2 size={16} className="text-[#ffd875]" /> : <VolumeX size={16} className="text-stone-500" />}
           </button>
 
-          {/* Mobile Collapsible Menu Button */}
+          {/* Mobile Menu Button */}
           <button
             ref={menuButtonRef}
             onClick={() => setIsMenuOpen((prev) => !prev)}
             title={isMenuOpen ? 'Đóng menu' : 'Mở menu chức năng'}
             aria-label="Menu"
             aria-expanded={isMenuOpen}
-            className={`p-2 rounded-lg border transition-all flex items-center justify-center ${
+            className={`p-2 rounded-xl border transition-all flex items-center justify-center cursor-pointer active:scale-95 ${
               isMenuOpen
-                ? 'bg-[#342250] text-[#ffd875] border-[#f3d994]/60 ring-1 ring-[#f3d994]/40'
-                : 'bg-[#221633] text-[#c8aa6e] hover:bg-[#342250] hover:text-[#f3d994] border-[#c8aa6e]/40'
+                ? 'bg-[#341b52] text-[#ffd875] border-[#ffd875] shadow-[0_0_12px_rgba(255,216,117,0.3)]'
+                : 'bg-[#1d122b] text-[#c8aa6e] hover:text-[#ffd875] border-[#c8aa6e]/40'
             }`}
           >
             {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -192,39 +202,37 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Mobile Collapsed Dropdown Menu & Backdrop */}
+      {/* Mobile Dropdown Menu */}
       {isMenuOpen && (
         <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 top-[49px] sm:top-[57px] bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fadeIn"
+            className="fixed inset-0 top-[49px] sm:top-[57px] bg-black/75 backdrop-blur-sm z-30 md:hidden animate-fadeIn"
             onClick={() => setIsMenuOpen(false)}
           />
 
-          {/* Dropdown Panel */}
           <div
             ref={menuRef}
-            className="absolute top-full left-0 right-0 mx-2 sm:mx-3 mt-1.5 p-3 bg-[#170f24]/95 backdrop-blur-xl border border-[#c8aa6e]/40 rounded-2xl shadow-2xl z-40 md:hidden flex flex-col gap-2 animate-fadeIn max-h-[calc(100vh-80px)] overflow-y-auto"
+            className="absolute top-full left-0 right-0 mx-3 mt-2 p-3.5 bg-[#140b20]/95 backdrop-blur-2xl border border-[#ffd875]/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-40 md:hidden flex flex-col gap-2.5 animate-fadeIn max-h-[calc(100vh-80px)] overflow-y-auto"
           >
-            {/* Room Info inside menu if active */}
+            {/* Room Info */}
             {roomCode && (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#221633]/90 border border-[#c8aa6e]/30 mb-0.5">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#1f1233] border border-[#c8aa6e]/40">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#a49a88]">Mã phòng:</span>
-                  <span className="font-mono font-bold text-sm text-[#f3d994] tracking-widest">{roomCode}</span>
+                  <span className="text-xs text-[#c8aa6e] font-serif uppercase">Mã phòng:</span>
+                  <span className="font-mono font-black text-base text-[#ffd875] tracking-widest">{roomCode}</span>
                 </div>
                 <button
                   onClick={handleCopyCode}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#342250] text-[#f3d994] text-xs border border-[#c8aa6e]/40 font-medium active:scale-95 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#341b52] text-[#ffd875] text-xs font-serif font-bold border border-[#ffd875]/40 active:scale-95 transition-all cursor-pointer"
                 >
                   {copied ? (
                     <>
-                      <Check size={12} className="text-emerald-400" />
+                      <Check size={13} className="text-emerald-400" />
                       <span className="text-emerald-400">Đã chép</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={12} />
+                      <Copy size={13} />
                       <span>Sao chép</span>
                     </>
                   )}
@@ -232,20 +240,20 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* Pass & Play (1 Máy) */}
+            {/* Pass & Play */}
             <button
               onClick={() => {
                 setIsMenuOpen(false);
                 onOpenPassAndPlay();
               }}
-              className="w-full p-2.5 rounded-xl bg-[#221633]/70 hover:bg-[#342250] border border-[#c8aa6e]/20 hover:border-[#c8aa6e]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99]"
+              className="w-full p-3 rounded-xl bg-[#1c102a]/80 hover:bg-[#2b1842] border border-[#c8aa6e]/25 hover:border-[#ffd875]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-600/30 to-amber-900/40 border border-[#c8aa6e]/40 flex items-center justify-center text-[#f3d994] shrink-0">
-                <Smartphone size={18} />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600/30 to-amber-900/50 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875] shrink-0">
+                <Smartphone size={19} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-[#f3d994]">Chơi Chung 1 Máy (Pass & Play)</div>
-                <div className="text-[11px] text-[#a49a88] truncate">Chuyền tay nhau chơi không cần mạng</div>
+                <div className="text-sm font-serif font-bold text-[#ffd875]">Chơi Chung 1 Máy (Pass & Play)</div>
+                <div className="text-[11px] text-[#c8aa6e]/80 truncate">Chuyền tay nhau chơi không cần mạng</div>
               </div>
             </button>
 
@@ -255,14 +263,14 @@ export const Header: React.FC<HeaderProps> = ({
                 setIsMenuOpen(false);
                 onOpenCustomWords();
               }}
-              className="w-full p-2.5 rounded-xl bg-[#221633]/70 hover:bg-[#342250] border border-[#c8aa6e]/20 hover:border-[#c8aa6e]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99]"
+              className="w-full p-3 rounded-xl bg-[#1c102a]/80 hover:bg-[#2b1842] border border-[#c8aa6e]/25 hover:border-[#ffd875]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600/30 to-purple-900/40 border border-[#c8aa6e]/40 flex items-center justify-center text-[#f3d994] shrink-0">
-                <BookOpen size={18} />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/30 to-purple-900/50 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875] shrink-0">
+                <BookOpen size={19} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-[#f3d994]">Bộ Từ Vựng Tùy Chỉnh</div>
-                <div className="text-[11px] text-[#a49a88] truncate">Tạo & chọn danh sách từ Hogwarts</div>
+                <div className="text-sm font-serif font-bold text-[#ffd875]">Bộ Từ Vựng Tùy Chỉnh</div>
+                <div className="text-[11px] text-[#c8aa6e]/80 truncate">Tạo & chọn danh sách từ Hogwarts</div>
               </div>
             </button>
 
@@ -272,37 +280,37 @@ export const Header: React.FC<HeaderProps> = ({
                 setIsMenuOpen(false);
                 onOpenHowToPlay();
               }}
-              className="w-full p-2.5 rounded-xl bg-[#221633]/70 hover:bg-[#342250] border border-[#c8aa6e]/20 hover:border-[#c8aa6e]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99]"
+              className="w-full p-3 rounded-xl bg-[#1c102a]/80 hover:bg-[#2b1842] border border-[#c8aa6e]/25 hover:border-[#ffd875]/50 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600/30 to-blue-900/40 border border-[#c8aa6e]/40 flex items-center justify-center text-[#f3d994] shrink-0">
-                <HelpCircle size={18} />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/30 to-blue-900/50 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875] shrink-0">
+                <HelpCircle size={19} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-[#f3d994]">Luật Chơi & Hướng Dẫn</div>
-                <div className="text-[11px] text-[#a49a88] truncate">Phân vai, cách biểu quyết và mẹo thi đấu</div>
+                <div className="text-sm font-serif font-bold text-[#ffd875]">Luật Chơi & Hướng Dẫn</div>
+                <div className="text-[11px] text-[#c8aa6e]/80 truncate">Phân vai, cách biểu quyết và mẹo thi đấu</div>
               </div>
             </button>
 
             {/* Sound Toggle row */}
             <button
               onClick={handleToggleSound}
-              className="w-full p-2.5 rounded-xl bg-[#221633]/70 hover:bg-[#342250] border border-[#c8aa6e]/20 hover:border-[#c8aa6e]/50 flex items-center justify-between text-left transition-all active:scale-[0.99]"
+              className="w-full p-3 rounded-xl bg-[#1c102a]/80 hover:bg-[#2b1842] border border-[#c8aa6e]/25 hover:border-[#ffd875]/50 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-600/30 to-emerald-900/40 border border-[#c8aa6e]/40 flex items-center justify-center text-[#f3d994] shrink-0">
-                  {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} className="text-stone-400" />}
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600/30 to-emerald-900/50 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875] shrink-0">
+                  {soundOn ? <Volume2 size={19} /> : <VolumeX size={19} className="text-stone-400" />}
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[#f3d994]">Hiệu Ứng Âm Thanh</div>
-                  <div className="text-[11px] text-[#a49a88]">
+                  <div className="text-sm font-serif font-bold text-[#ffd875]">Hiệu Ứng Âm Thanh</div>
+                  <div className="text-[11px] text-[#c8aa6e]/80">
                     {soundOn ? 'Đang bật hiệu ứng âm' : 'Đang tắt âm'}
                   </div>
                 </div>
               </div>
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-md border ${
+                className={`text-xs font-serif font-bold px-3 py-1 rounded-md border ${
                   soundOn
-                    ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/50'
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
                     : 'bg-stone-900 text-stone-400 border-stone-700'
                 }`}
               >
@@ -317,7 +325,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                   onLeaveRoom();
                 }}
-                className="w-full p-2.5 rounded-xl bg-red-950/70 hover:bg-red-900 text-red-200 hover:text-white border border-red-800/50 flex items-center justify-center gap-2 text-sm font-medium transition-all active:scale-[0.99] mt-1"
+                className="w-full p-3 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-red-200 hover:text-white border border-red-700/60 flex items-center justify-center gap-2 text-sm font-serif font-bold transition-all active:scale-[0.99] mt-1 cursor-pointer shadow-lg"
               >
                 <LogOut size={16} />
                 <span>Rời Phòng Chơi Hiện Tại</span>

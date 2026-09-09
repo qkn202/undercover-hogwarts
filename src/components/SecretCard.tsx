@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Role } from '../types';
-import { Eye, EyeOff, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, ShieldAlert, Mic } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface SecretCardProps {
@@ -33,18 +33,20 @@ export const SecretCard: React.FC<SecretCardProps> = ({
   const isMrWhite = role === 'MR_WHITE';
 
   return (
-    <div className="w-full max-w-sm mx-auto flex flex-col items-center">
+    <div className="w-full max-w-sm mx-auto flex flex-col items-center animate-fadeIn">
       {/* Player Header */}
-      <div className="w-full flex items-center justify-between mb-3 px-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#2a1a3e] border border-[#c8aa6e]/40 flex items-center justify-center text-sm font-bold text-[#f3d994]">
-            {playerName.charAt(0).toUpperCase()}
+      <div className="w-full flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ffd875] to-[#740001] p-0.5 shadow-md flex-shrink-0">
+            <div className="w-full h-full rounded-[10px] bg-[#120a1c] text-[#ffd875] font-cinzel font-bold text-xs flex items-center justify-center">
+              {playerName.charAt(0).toUpperCase()}
+            </div>
           </div>
           <div>
-            <div className="font-serif font-bold text-stone-200 text-sm">
+            <div className="font-serif font-bold text-[#f3efe6] text-sm">
               {playerName}
             </div>
-            <p className="text-[11px] text-stone-400">Vòng đấu #{roundNumber}</p>
+            <p className="text-[11px] text-[#c8aa6e]">Vòng đấu #{roundNumber}</p>
           </div>
         </div>
 
@@ -52,91 +54,109 @@ export const SecretCard: React.FC<SecretCardProps> = ({
         <div className="flex items-center gap-1.5">
           {typeof speakingOrder === 'number' && (
             <div
-              className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border font-serif font-bold ${
+              className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-xl border font-serif font-bold shadow-sm ${
                 speakingOrder === 1
-                  ? 'bg-amber-500/30 text-amber-200 border-amber-400/60 shadow-sm'
-                  : 'bg-purple-950/40 text-[#ffd875] border-purple-800/40'
+                  ? 'bg-gradient-to-r from-amber-500/30 to-amber-600/20 text-[#ffd875] border-[#ffd875]'
+                  : 'bg-[#221336] text-[#ffd875] border-[#c8aa6e]/40'
               }`}
             >
-              <span>🎤</span>
-              <span>{speakingOrder === 1 ? 'Lượt #1 (Nói đầu)' : `Lượt #${speakingOrder}`}</span>
+              <Mic size={12} className="text-[#ffd875]" />
+              <span>{speakingOrder === 1 ? 'Nói đầu (#1)' : `Lượt #${speakingOrder}`}</span>
             </div>
           )}
-          <div className="flex items-center gap-1 text-[11px] text-amber-300/80 bg-amber-950/40 px-2 py-1 rounded-md border border-amber-800/40">
-            <ShieldAlert size={13} />
-            <span>Che màn hình</span>
+          <div className="flex items-center gap-1 text-[10px] text-amber-300 bg-amber-950/60 px-2 py-1 rounded-xl border border-amber-600/40">
+            <ShieldAlert size={12} />
+            <span className="hidden xs:inline">Che màn hình</span>
           </div>
         </div>
       </div>
 
-      {/* The Magical Flip Card */}
+      {/* The Magical Tactile Flip Card */}
       <div
         onClick={toggleReveal}
-        className={`w-full min-h-[380px] rounded-2xl cursor-pointer select-none transition-all duration-300 transform relative overflow-hidden border-2 shadow-2xl ${
+        className={`w-full min-h-[400px] rounded-3xl cursor-pointer select-none transition-all duration-300 transform relative overflow-hidden border-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ${
           isRevealed
-            ? 'bg-gradient-to-b from-[#1b1424] to-[#120d18] border-[#c8aa6e] shadow-[#c8aa6e]/20'
-            : 'bg-gradient-to-b from-[#241733] via-[#1a1126] to-[#0f0917] border-[#8b6f38] hover:border-[#f3d994] active:scale-[0.98]'
+            ? 'glass-panel-gold border-[#ffd875] shadow-[0_0_30px_rgba(255,216,117,0.25)]'
+            : 'bg-gradient-to-b from-[#241538] via-[#1a0e2a] to-[#0e0716] border-[#c8aa6e]/60 hover:border-[#ffd875] active:scale-[0.98]'
         }`}
       >
-        {/* Background Decorative Crest */}
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none flex items-center justify-center">
-          <span className="text-[180px]">⚡</span>
+        {/* Renaissance Filigree Corner Accents */}
+        <div className="absolute top-2.5 left-2.5 text-[#ffd875]/40 text-xs select-none pointer-events-none font-serif">
+          ✦
+        </div>
+        <div className="absolute top-2.5 right-2.5 text-[#ffd875]/40 text-xs select-none pointer-events-none font-serif">
+          ✦
+        </div>
+        <div className="absolute bottom-2.5 left-2.5 text-[#ffd875]/40 text-xs select-none pointer-events-none font-serif">
+          ✦
+        </div>
+        <div className="absolute bottom-2.5 right-2.5 text-[#ffd875]/40 text-xs select-none pointer-events-none font-serif">
+          ✦
+        </div>
+
+        {/* Background Crest Watermark */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex items-center justify-center">
+          <span className="text-[200px]">⚡</span>
         </div>
 
         {!isRevealed ? (
           /* Card Back (Face Down) */
-          <div className="h-full min-h-[380px] p-6 flex flex-col items-center justify-center text-center">
-            {/* Wax Seal Design */}
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#8a1c14] to-[#450a0a] border-4 border-[#c8aa6e] shadow-lg flex items-center justify-center mb-6 relative animate-pulse">
-              <span className="text-4xl select-none">📜</span>
-              <div className="absolute -inset-1 rounded-full border border-[#f3d994]/30 pointer-events-none"></div>
+          <div className="h-full min-h-[400px] p-6 flex flex-col items-center justify-center text-center relative z-10">
+            {/* Realistic 3D Hogwarts Wax Seal */}
+            <div className="wax-seal w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-2xl cursor-pointer">
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-4xl filter drop-shadow select-none">📜</span>
+              </div>
             </div>
 
-            <h3 className="font-serif font-bold text-xl text-[#f3d994] tracking-wider mb-2">
-              THẺ BÍ MẬT HOGWARTS
+            <span className="text-[10px] font-cinzel font-bold text-[#ffd875] uppercase tracking-widest block mb-1">
+              HỌC VIỆN PHÙ THỦY HOGWARTS
+            </span>
+            <h3 className="font-cinzel font-black text-xl sm:text-2xl text-[#fff2be] tracking-wider mb-2 drop-shadow">
+              THẺ BÍ MẬT
             </h3>
-            <p className="text-stone-300 text-xs max-w-xs mb-6 leading-relaxed">
-              Từ ngữ ma thuật được bảo mật tuyệt đối. Nhấn vào thẻ để lật mở!
+            <p className="text-[#c8aa6e]/90 text-xs max-w-xs mb-6 leading-relaxed font-medium">
+              Từ ma thuật của bạn được phong ấn bảo mật. Nhấn vào thẻ để lật mở!
             </p>
 
-            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#342250]/80 border border-[#c8aa6e]/60 text-[#f3d994] font-medium text-sm shadow-md hover:bg-[#462e6d] transition-all">
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#2b1642] to-[#3a1d59] border border-[#ffd875]/60 text-[#ffd875] font-cinzel font-bold text-xs sm:text-sm shadow-xl hover:from-[#3a1d59] hover:to-[#4a2673] transition-all">
               <Eye size={17} />
-              <span>Chạm Để Mở Thẻ</span>
+              <span>CHẠM ĐỂ MỞ THẺ</span>
             </div>
           </div>
         ) : (
-          /* Card Front (Revealed) — Identical layout for both Student and Death Eater */
-          <div className="h-full min-h-[380px] p-6 flex flex-col items-center justify-between text-center relative z-10 animate-fadeIn">
+          /* Card Front (Revealed) */
+          <div className="h-full min-h-[400px] p-6 flex flex-col items-center justify-between text-center relative z-10 animate-fadeIn">
             {/* Top Indicator */}
-            <div className="w-full flex flex-col items-center pt-2">
-              <span className="text-4xl mb-2 select-none">
+            <div className="w-full flex flex-col items-center pt-1">
+              <span className="text-4xl mb-2 select-none filter drop-shadow">
                 {isMrWhite ? '👻' : '📜'}
               </span>
-              <span className="text-xs px-2.5 py-1 rounded-full font-bold border uppercase tracking-wider mb-1 bg-[#251838] text-[#f3d994] border-[#c8aa6e]/50">
+              <span className="text-[10px] px-3 py-1 rounded-full font-cinzel font-bold border uppercase tracking-wider mb-1 bg-[#1a0f28] text-[#ffd875] border-[#ffd875]/40 shadow-sm">
                 {isMrWhite ? 'KẺ KHÔNG TÊN' : 'TỪ MA THUẬT CỦA BẠN'}
               </span>
-              <h3 className="font-serif font-extrabold text-2xl text-[#f3d994] tracking-wide">
+              <h3 className="font-cinzel font-black text-2xl text-[#fff2be] tracking-wide">
                 {isMrWhite ? 'BẠN LÀ MR. WHITE' : 'TỪ BÍ MẬT'}
               </h3>
             </div>
 
             {/* Middle Word Box */}
-            <div className="w-full my-3 py-4 px-3 bg-[#0c0812]/90 rounded-xl border border-[#c8aa6e]/50 shadow-inner">
-              <span className="text-[11px] text-stone-400 block mb-1 uppercase tracking-wider font-semibold">
+            <div className="w-full my-3 py-4 px-3 bg-[#0a0512]/90 rounded-2xl border border-[#ffd875]/50 shadow-inner">
+              <span className="text-[10px] text-[#c8aa6e] block mb-1 uppercase tracking-widest font-cinzel font-bold">
                 Nội Dung Trong Thẻ
               </span>
               {isMrWhite ? (
                 <div className="py-2">
-                  <span className="text-xl font-extrabold text-purple-300 italic">
+                  <span className="text-xl font-extrabold text-purple-300 italic font-serif">
                     ❓ BẠN KHÔNG CÓ TỪ!
                   </span>
-                  <p className="text-[11px] text-purple-400/90 mt-1">
-                    Hãy lắng nghe cách người khác miêu tả để đoán từ của họ!
+                  <p className="text-[11px] text-purple-300/90 mt-1 font-medium">
+                    Hãy lắng nghe cách người khác miêu tả để suy luận từ của họ!
                   </p>
                 </div>
               ) : (
                 <div className="py-1">
-                  <span className="text-2xl font-black text-[#ffd875] tracking-wide drop-shadow-md">
+                  <span className="text-2xl sm:text-3xl font-black text-[#ffd875] tracking-wide drop-shadow-[0_2px_10px_rgba(255,216,117,0.3)] font-serif">
                     {word || 'Chưa nhận từ'}
                   </span>
                 </div>
@@ -145,21 +165,22 @@ export const SecretCard: React.FC<SecretCardProps> = ({
 
             {/* Speaking order inside card */}
             {typeof speakingOrder === 'number' && (
-              <div className="w-full bg-[#1b1226]/90 rounded-xl px-3 py-2 border border-[#c8aa6e]/40 flex items-center justify-between text-xs mb-3 shadow-inner">
+              <div className="w-full bg-[#160b24]/90 rounded-xl px-3.5 py-2.5 border border-[#ffd875]/30 flex items-center justify-between text-xs mb-3 shadow-inner">
                 <span className="text-stone-300 font-serif flex items-center gap-1.5">
-                  <span>🎤</span> Thứ tự phát biểu của bạn:
+                  <Mic size={13} className="text-[#ffd875]" />
+                  <span>Thứ tự phát biểu của bạn:</span>
                 </span>
-                <span className="font-bold text-[#ffd875] px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 font-mono">
-                  {speakingOrder === 1 ? '🌟 Số 1 (Nói đầu tiên)' : `Lượt số #${speakingOrder}`}
+                <span className="font-mono font-black text-[#ffd875] px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40">
+                  {speakingOrder === 1 ? '🌟 Số 1 (Nói đầu)' : `Lượt #${speakingOrder}`}
                 </span>
               </div>
             )}
 
-            {/* Instructions: Neutral and thrilling */}
-            <p className="text-stone-300 text-xs leading-relaxed px-2 mb-4">
+            {/* Instructions */}
+            <p className="text-[#c8aa6e]/90 text-xs leading-relaxed px-2 mb-4 font-medium">
               {isMrWhite
-                ? 'Bạn không biết từ bí mật. Hãy lắng nghe các câu miêu tả xung quanh, suy luận chủ đề và tự tin "chém gió" để không bị loại!'
-                : 'Hãy miêu tả từ của bạn thật khéo léo. Bạn không biết mình là Học Sinh hay Tử Thần — hãy lắng nghe mọi người xung quanh để tự phán đoán phe phái!'}
+                ? 'Bạn không có từ bí mật. Hãy lắng nghe các câu miêu tả xung quanh, suy luận chủ đề và khéo léo hòa nhập để không bị phát hiện!'
+                : 'Hãy miêu tả từ của bạn thật tinh tế. Bạn không biết mình là Học Sinh hay Tử Thần — hãy lắng nghe mọi người để phán đoán phe phái!'}
             </p>
 
             {/* Hide Button */}
@@ -168,7 +189,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({
                 e.stopPropagation();
                 toggleReveal();
               }}
-              className="w-full py-2 rounded-xl bg-[#20152e] hover:bg-[#322047] text-stone-300 hover:text-[#f3d994] border border-[#c8aa6e]/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
+              className="w-full py-2.5 rounded-xl bg-[#1d102b] hover:bg-[#2e1945] text-[#c8aa6e] hover:text-[#ffd875] border border-[#c8aa6e]/40 text-xs font-serif font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
             >
               <EyeOff size={15} />
               <span>Ẩn Thẻ (Tránh Nhìn Trộm)</span>
@@ -177,8 +198,8 @@ export const SecretCard: React.FC<SecretCardProps> = ({
         )}
       </div>
 
-      <p className="text-[11px] text-stone-500 mt-2 text-center">
-        💡 Mẹo: Nhấn lại vào thẻ để úp xuống bất kỳ lúc nào để tránh người bên cạnh thấy.
+      <p className="text-[11px] text-[#c8aa6e]/70 mt-2.5 text-center font-medium">
+        💡 Mẹo: Nhấn lại vào thẻ để úp xuống bất cứ lúc nào nhằm tránh người bên cạnh thấy.
       </p>
     </div>
   );

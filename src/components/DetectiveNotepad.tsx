@@ -36,36 +36,36 @@ export const DetectiveNotepad: React.FC<DetectiveNotepadProps> = ({
   const deathEaterCount = Object.values(suspicions).filter((s) => s === 'DEATH_EATER').length;
 
   return (
-    <div className="w-full max-w-sm mx-auto bg-gradient-to-b from-[#181024] via-[#120a1c] to-[#0d0714] rounded-2xl border border-[#c8aa6e]/40 p-3.5 shadow-xl text-stone-200 animate-fadeIn mt-3">
+    <div className="w-full max-w-sm mx-auto glass-panel rounded-2xl border border-[#c8aa6e]/40 p-4 shadow-xl text-stone-200 animate-fadeIn mt-3">
       {/* Header */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between cursor-pointer text-left select-none"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[#ffd875]">
-            <BookMarked size={15} />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-[#ffd875]/40 flex items-center justify-center text-[#ffd875]">
+            <BookMarked size={16} />
           </div>
           <div>
-            <span className="font-serif font-bold text-xs sm:text-sm text-[#f3d994] flex items-center gap-1.5">
+            <span className="font-cinzel font-bold text-xs sm:text-sm text-[#ffd875] flex items-center gap-1.5">
               <span>SỔ TAY ĐIỀU TRA</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-800 text-stone-300 font-sans border border-stone-700">
-                Chỉ bạn thấy
+              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#201133] text-[#c8aa6e] font-serif border border-[#c8aa6e]/30">
+                Bảo mật
               </span>
             </span>
-            <p className="text-[10px] text-stone-400">
+            <p className="text-[10px] text-[#c8aa6e]/80">
               Ghi chú suy đoán phe phái của từng người
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="text-[10px] flex items-center gap-1 font-mono">
-            {studentCount > 0 && <span className="text-amber-400">🪄{studentCount}</span>}
-            {deathEaterCount > 0 && <span className="text-red-400">🐍{deathEaterCount}</span>}
+          <div className="text-[10px] flex items-center gap-1.5 font-mono font-bold">
+            {studentCount > 0 && <span className="text-[#ffd875] bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30">🪄 {studentCount}</span>}
+            {deathEaterCount > 0 && <span className="text-red-400 bg-red-950/60 px-1.5 py-0.5 rounded border border-red-500/30">🐍 {deathEaterCount}</span>}
           </div>
-          {isOpen ? <ChevronUp size={16} className="text-stone-400" /> : <ChevronDown size={16} className="text-stone-400" />}
+          {isOpen ? <ChevronUp size={16} className="text-[#c8aa6e]" /> : <ChevronDown size={16} className="text-[#c8aa6e]" />}
         </div>
       </button>
 
