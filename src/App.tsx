@@ -685,6 +685,19 @@ export function App() {
             });
           }
         }
+      } else if (document.visibilityState === 'hidden') {
+        console.log('[App] Tab hidden. Destroying connection to prevent ghosting.');
+        if (netRef.current) {
+          // Send explicit leave before destruction just in case
+          if (myPlayer && !myPlayer.isHost) {
+            netRef.current.sendToHost({
+              type: 'PLAYER_LEFT',
+              senderId: myPlayer.id,
+              payload: { playerId: myPlayer.id },
+            });
+          }
+          netRef.current.destroy();
+        }
       }
     };
 
@@ -1012,7 +1025,7 @@ export function App() {
     return () => clearInterval(interval);
   }, [myPlayer?.isHost, roomCode]);
 
-  // Host beforeunload listener: only notify peers on true tab close, avoiding false alarms on mobile tab switch
+  // Host beforeunload listener: notify peers on true tab close and destroy connection
   useEffect(() => {
     const handleHostUnload = () => {
       if (myPlayer?.isHost && netRef.current) {
@@ -1033,11 +1046,12 @@ export function App() {
             message: 'Chủ phòng đã đóng tab.',
           },
         });
+        netRef.current.destroy();
       }
     };
 
     window.addEventListener('beforeunload', handleHostUnload);
-    // DO NOT use pagehide: On iOS Safari and Android Chrome, pagehide fires whenever switching tabs or minimizing.
+    // iOS Safari / Android Chrome typically use visibilitychange or pagehide which we cover above.
     return () => {
       window.removeEventListener('beforeunload', handleHostUnload);
     };
@@ -1052,12 +1066,15 @@ export function App() {
           senderId: myPlayer.id,
           payload: { playerId: myPlayer.id },
         });
+        netRef.current.destroy();
       }
     };
 
     window.addEventListener('beforeunload', handleGuestUnload);
+    window.addEventListener('pagehide', handleGuestUnload);
     return () => {
       window.removeEventListener('beforeunload', handleGuestUnload);
+      window.removeEventListener('pagehide', handleGuestUnload);
     };
   }, [myPlayer]);
 
