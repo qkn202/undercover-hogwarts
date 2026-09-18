@@ -25,13 +25,11 @@ export const SpeakingOrderBanner: React.FC<SpeakingOrderBannerProps> = ({
     .filter((p) => typeof p.speakingOrder === 'number' && !p.isEliminated)
     .sort((a, b) => (a.speakingOrder || 0) - (b.speakingOrder || 0));
 
-  if (orderedPlayers.length === 0) return null;
-
   // Determine active speaker from synchronized currentSpeakerId
   const activeIdx = orderedPlayers.findIndex((p) => p.id === currentSpeakerId);
   const safeIdx = activeIdx >= 0 ? activeIdx : 0;
   const currentSpeaker = orderedPlayers[safeIdx] || orderedPlayers[0];
-  const isMyTurn = currentSpeaker?.id === myPlayerId;
+  const isMyTurn = Boolean(currentSpeaker && currentSpeaker.id === myPlayerId);
 
   // Haptic feedback & sound when it becomes my turn
   const prevIsMyTurn = useRef(false);
@@ -46,6 +44,8 @@ export const SpeakingOrderBanner: React.FC<SpeakingOrderBannerProps> = ({
     }
     prevIsMyTurn.current = isMyTurn;
   }, [isMyTurn]);
+
+  if (orderedPlayers.length === 0) return null;
 
   const handleNextSpeaker = () => {
     const nextIdx = (safeIdx + 1) % orderedPlayers.length;

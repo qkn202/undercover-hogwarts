@@ -433,7 +433,7 @@ export class NetworkManager {
       return true;
     }
 
-    if (this.channel && this.channel.state === 'joined') {
+    if (this.channel && this.channel.state === 'joined' && this.isSocketHealthy()) {
       // Re-track presence to ensure server presence table is refreshed
       this.channel.track({
         id: this.myPlayerId,

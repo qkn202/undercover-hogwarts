@@ -74,57 +74,109 @@ export const SecretCard: React.FC<SecretCardProps> = ({
       {/* The Ancient Grimoire 3D Flip Card */}
       <div
         onClick={toggleReveal}
-        className={`w-full min-h-[430px] rounded-3xl cursor-pointer select-none transition-all duration-500 transform relative overflow-hidden border-2 shadow-[0_25px_60px_rgba(0,0,0,0.9)] ${
+        className={`w-full min-h-[460px] rounded-3xl cursor-pointer select-none transition-all duration-500 transform relative overflow-hidden border-2 shadow-[0_25px_60px_rgba(0,0,0,0.95)] ${
           isRevealed
-            ? 'glass-panel-gold border-[#ffd875] shadow-[0_0_40px_rgba(255,216,117,0.35)]'
-            : 'bg-gradient-to-b from-[#211135] via-[#160b24] to-[#0a0512] border-[#c8aa6e]/70 hover:border-[#ffd875] active:scale-[0.98]'
+            ? 'glass-panel-gold border-[#ffd875] shadow-[0_0_45px_rgba(255,216,117,0.35)]'
+            : 'grimoire-card-back border-[#ffd875]/60 hover:border-[#ffd875] active:scale-[0.985] group'
         }`}
       >
-        {/* Grimoire Antique Corner Metal Ornaments */}
-        <div className="absolute top-3 left-3 text-[#ffd875]/60 text-sm select-none pointer-events-none font-serif">
-          ❖
-        </div>
-        <div className="absolute top-3 right-3 text-[#ffd875]/60 text-sm select-none pointer-events-none font-serif">
-          ❖
-        </div>
-        <div className="absolute bottom-3 left-3 text-[#ffd875]/60 text-sm select-none pointer-events-none font-serif">
-          ❖
-        </div>
-        <div className="absolute bottom-3 right-3 text-[#ffd875]/60 text-sm select-none pointer-events-none font-serif">
-          ❖
+        {/* Grimoire Antique 4-Corner Ornate Filigree Metal Brackets */}
+        <div className="absolute top-2.5 left-2.5 w-10 h-10 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110">
+          <svg viewBox="0 0 40 40" fill="none" className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <path d="M3 3H22C14 3 10 7 8 13C6 19 6 26 6 37" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M3 3V22C3 14 7 10 13 8C19 6 26 6 37 6" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="3" fill="url(#goldCornerGrad)" />
+            <path d="M14 14L26 26M15 22C20 18 24 14 32 10M22 15C18 20 14 24 10 32" stroke="url(#goldCornerGrad)" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+            <defs>
+              <linearGradient id="goldCornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fff5d1" />
+                <stop offset="50%" stopColor="#ffd875" />
+                <stop offset="100%" stopColor="#9a7322" />
+              </linearGradient>
+            </defs>
+          </svg>
         </div>
 
-        {/* Ambient Leather Border Inset */}
-        <div className="absolute inset-2 rounded-[22px] border border-[#c8aa6e]/20 pointer-events-none" />
+        <div className="absolute top-2.5 right-2.5 w-10 h-10 pointer-events-none select-none scale-x-[-1] transition-transform duration-300 group-hover:scale-x-[-1.1] group-hover:scale-y-110">
+          <svg viewBox="0 0 40 40" fill="none" className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <path d="M3 3H22C14 3 10 7 8 13C6 19 6 26 6 37" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M3 3V22C3 14 7 10 13 8C19 6 26 6 37 6" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="3" fill="url(#goldCornerGrad)" />
+            <path d="M14 14L26 26M15 22C20 18 24 14 32 10M22 15C18 20 14 24 10 32" stroke="url(#goldCornerGrad)" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+          </svg>
+        </div>
+
+        <div className="absolute bottom-2.5 left-2.5 w-10 h-10 pointer-events-none select-none scale-y-[-1] transition-transform duration-300 group-hover:scale-y-[-1.1] group-hover:scale-x-110">
+          <svg viewBox="0 0 40 40" fill="none" className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <path d="M3 3H22C14 3 10 7 8 13C6 19 6 26 6 37" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M3 3V22C3 14 7 10 13 8C19 6 26 6 37 6" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="3" fill="url(#goldCornerGrad)" />
+            <path d="M14 14L26 26M15 22C20 18 24 14 32 10M22 15C18 20 14 24 10 32" stroke="url(#goldCornerGrad)" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+          </svg>
+        </div>
+
+        <div className="absolute bottom-2.5 right-2.5 w-10 h-10 pointer-events-none select-none scale-[-1] transition-transform duration-300 group-hover:scale-[-1.1]">
+          <svg viewBox="0 0 40 40" fill="none" className="w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <path d="M3 3H22C14 3 10 7 8 13C6 19 6 26 6 37" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M3 3V22C3 14 7 10 13 8C19 6 26 6 37 6" stroke="url(#goldCornerGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="3" fill="url(#goldCornerGrad)" />
+            <path d="M14 14L26 26M15 22C20 18 24 14 32 10M22 15C18 20 14 24 10 32" stroke="url(#goldCornerGrad)" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+          </svg>
+        </div>
+
+        {/* Ambient Leather Border Inset with Gold Trim */}
+        <div className="absolute inset-3.5 rounded-[20px] border border-[#ffd875]/25 pointer-events-none" />
+        <div className="absolute inset-5 rounded-[16px] border border-dashed border-[#c8aa6e]/20 pointer-events-none" />
 
         {!isRevealed ? (
           /* CARD BACK: ANCIENT GRIMOIRE COVER WITH 3D WAX SEAL */
-          <div className="h-full min-h-[430px] p-6 flex flex-col items-center justify-center text-center relative z-10">
+          <div className="h-full min-h-[460px] p-6 flex flex-col items-center justify-center text-center relative z-10">
+            {/* Spinning Arcane Runic Background Watermark */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.14] overflow-hidden">
+              <svg viewBox="0 0 200 200" className="w-80 h-80 animate-[spin_80s_linear_infinite] text-[#ffd875]" fill="none" stroke="currentColor">
+                <circle cx="100" cy="100" r="95" strokeWidth="1" strokeDasharray="4 6" />
+                <circle cx="100" cy="100" r="80" strokeWidth="1.5" />
+                <circle cx="100" cy="100" r="65" strokeWidth="1" strokeDasharray="2 4" />
+                <polygon points="100,10 178,145 22,145" strokeWidth="1" opacity="0.7" />
+                <polygon points="100,190 22,55 178,55" strokeWidth="1" opacity="0.7" />
+                <circle cx="100" cy="100" r="45" strokeWidth="1" />
+              </svg>
+            </div>
+
             {/* Realistic 3D Hogwarts Wax Seal */}
-            <div className="wax-seal w-28 h-28 rounded-full flex items-center justify-center mb-6 shadow-[0_10px_30px_rgba(0,0,0,0.8)] cursor-pointer animate-[breathingPulse_3s_ease-in-out_infinite] border-2 border-[#ff7070]/60">
-              <div className="flex flex-col items-center justify-center">
-                <span className="text-5xl filter drop-shadow select-none">📜</span>
+            <div className="wax-seal w-32 h-32 rounded-full flex items-center justify-center mb-6 shadow-[0_15px_35px_rgba(0,0,0,0.9)] cursor-pointer animate-breathing border-2 border-[#ff7070]/70 relative">
+              {/* Seal Inner Bevel & Emblem */}
+              <div className="w-24 h-24 rounded-full border border-[#ffd875]/60 flex flex-col items-center justify-center bg-gradient-to-br from-[#b81d1d] via-[#740001] to-[#3a0000] shadow-[inset_0_3px_8px_rgba(0,0,0,0.8)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.4),transparent_60%)] pointer-events-none" />
+                <span className="font-cinzel font-black text-3xl text-[#ffd875] tracking-widest drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] select-none">
+                  H
+                </span>
+                <span className="text-[9px] font-cinzel font-bold text-[#ffd875]/80 uppercase tracking-wider select-none mt-0.5">
+                  HOGWARTS
+                </span>
               </div>
             </div>
 
-            <span className="text-[11px] font-cinzel font-bold text-[#ffd875] uppercase tracking-widest block mb-1">
-              HỌC VIỆN PHÙ THỦY HOGWARTS
-            </span>
-            <h3 className="font-cinzel font-black text-2xl sm:text-3xl text-[#fff2be] tracking-wider mb-2 drop-shadow-[0_2px_12px_rgba(255,216,117,0.3)]">
-              THẺ BÍ MẬT
-            </h3>
-            <p className="text-[#e0cfab] text-xs sm:text-sm max-w-xs mb-6 leading-relaxed font-serif">
-              Từ khóa thân phận của bạn đang được niêm phong ma thuật. Chạm vào thẻ để lật mở!
-            </p>
+            <div className="relative z-10">
+              <span className="text-[11px] font-cinzel font-bold text-[#ffd875] uppercase tracking-[0.25em] block mb-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                HỌC VIỆN PHÙ THỦY HOGWARTS
+              </span>
+              <h3 className="font-cinzel font-black text-2xl sm:text-3xl text-[#fff5d6] tracking-wider mb-2 drop-shadow-[0_2px_14px_rgba(255,216,117,0.4)]">
+                THẺ BÍ MẬT
+              </h3>
+              <p className="text-[#e8d7b5] text-xs sm:text-sm max-w-xs mb-6 leading-relaxed font-serif drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                Từ khóa thân phận của bạn đang được niêm phong ma thuật. Chạm vào thẻ để lật mở!
+              </p>
 
-            <div className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#740001] via-[#8e1d13] to-[#740001] border border-[#ffd875]/70 text-[#ffd875] font-cinzel font-black text-xs sm:text-sm shadow-xl hover:scale-105 transition-all">
-              <Eye size={18} />
-              <span>CHẠM ĐỂ MỞ PHONG ẤN</span>
+              <div className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#740001] via-[#9e1c14] to-[#740001] border-2 border-[#ffd875]/80 text-[#ffd875] font-cinzel font-black text-xs sm:text-sm shadow-[0_8px_25px_rgba(116,0,1,0.6)] hover:scale-105 active:scale-95 transition-all group-hover:border-[#ffd875]">
+                <Eye size={18} className="text-[#ffd875] animate-pulse" />
+                <span className="tracking-wider">CHẠM ĐỂ MỞ PHONG ẤN</span>
+              </div>
             </div>
           </div>
         ) : (
           /* CARD FRONT: REVEALED ANCIENT SCROLL */
-          <div className="h-full min-h-[430px] p-6 flex flex-col items-center justify-between text-center relative z-10 animate-fadeIn">
+          <div className="h-full min-h-[460px] p-6 flex flex-col items-center justify-between text-center relative z-10 animate-fadeIn">
             {/* Top Emblem Header */}
             <div className="w-full flex flex-col items-center pt-2">
               <span className="text-4xl mb-2 select-none filter drop-shadow">

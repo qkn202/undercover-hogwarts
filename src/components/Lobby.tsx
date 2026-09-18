@@ -41,49 +41,49 @@ interface LobbyProps {
 
 const HOUSE_THEMES: Record<string, { ring: string; border: string; bg: string; badge: string; crest: string; name: string }> = {
   GRYFFINDOR: {
-    ring: 'from-[#740001] via-[#c8aa6e] to-[#740001]',
+    ring: 'from-[#740001] via-[#ffd875] to-[#740001]',
     border: 'border-[#c8aa6e]/50 hover:border-[#ffd875]',
-    bg: 'bg-[#150711]',
+    bg: 'house-card-gryffindor',
     badge: 'bg-[#740001]/90 text-[#ffd875] border-[#ffd875]/50',
     crest: '🦁',
     name: 'Gryffindor',
   },
   Gryffindor: {
-    ring: 'from-[#740001] via-[#c8aa6e] to-[#740001]',
+    ring: 'from-[#740001] via-[#ffd875] to-[#740001]',
     border: 'border-[#c8aa6e]/50 hover:border-[#ffd875]',
-    bg: 'bg-[#150711]',
+    bg: 'house-card-gryffindor',
     badge: 'bg-[#740001]/90 text-[#ffd875] border-[#ffd875]/50',
     crest: '🦁',
     name: 'Gryffindor',
   },
   SLYTHERIN: {
-    ring: 'from-[#0d6241] via-[#8fc99a] to-[#0d6241]',
+    ring: 'from-[#0d6241] via-[#4ade80] to-[#0d6241]',
     border: 'border-[#2e8a57]/50 hover:border-[#4ade80]',
-    bg: 'bg-[#061610]',
+    bg: 'house-card-slytherin',
     badge: 'bg-[#0d6241]/90 text-[#86efac] border-[#86efac]/50',
     crest: '🐍',
     name: 'Slytherin',
   },
   Slytherin: {
-    ring: 'from-[#0d6241] via-[#8fc99a] to-[#0d6241]',
+    ring: 'from-[#0d6241] via-[#4ade80] to-[#0d6241]',
     border: 'border-[#2e8a57]/50 hover:border-[#4ade80]',
-    bg: 'bg-[#061610]',
+    bg: 'house-card-slytherin',
     badge: 'bg-[#0d6241]/90 text-[#86efac] border-[#86efac]/50',
     crest: '🐍',
     name: 'Slytherin',
   },
   RAVENCLAW: {
-    ring: 'from-[#0e3b66] via-[#7dd3fc] to-[#0e3b66]',
+    ring: 'from-[#0e3b66] via-[#38bdf8] to-[#0e3b66]',
     border: 'border-[#1d5b91]/50 hover:border-[#38bdf8]',
-    bg: 'bg-[#061222]',
+    bg: 'house-card-ravenclaw',
     badge: 'bg-[#0e3b66]/90 text-[#7dd3fc] border-[#7dd3fc]/50',
     crest: '🦅',
     name: 'Ravenclaw',
   },
   Ravenclaw: {
-    ring: 'from-[#0e3b66] via-[#7dd3fc] to-[#0e3b66]',
+    ring: 'from-[#0e3b66] via-[#38bdf8] to-[#0e3b66]',
     border: 'border-[#1d5b91]/50 hover:border-[#38bdf8]',
-    bg: 'bg-[#061222]',
+    bg: 'house-card-ravenclaw',
     badge: 'bg-[#0e3b66]/90 text-[#7dd3fc] border-[#7dd3fc]/50',
     crest: '🦅',
     name: 'Ravenclaw',
@@ -91,7 +91,7 @@ const HOUSE_THEMES: Record<string, { ring: string; border: string; bg: string; b
   HUFFLEPUFF: {
     ring: 'from-[#b08800] via-[#fde047] to-[#b08800]',
     border: 'border-[#b08800]/50 hover:border-[#fde047]',
-    bg: 'bg-[#181406]',
+    bg: 'house-card-hufflepuff',
     badge: 'bg-[#6b5200]/90 text-[#fef08a] border-[#fde047]/50',
     crest: '🦡',
     name: 'Hufflepuff',
@@ -99,7 +99,7 @@ const HOUSE_THEMES: Record<string, { ring: string; border: string; bg: string; b
   Hufflepuff: {
     ring: 'from-[#b08800] via-[#fde047] to-[#b08800]',
     border: 'border-[#b08800]/50 hover:border-[#fde047]',
-    bg: 'bg-[#181406]',
+    bg: 'house-card-hufflepuff',
     badge: 'bg-[#6b5200]/90 text-[#fef08a] border-[#fde047]/50',
     crest: '🦡',
     name: 'Hufflepuff',
@@ -109,7 +109,7 @@ const HOUSE_THEMES: Record<string, { ring: string; border: string; bg: string; b
 const DEFAULT_THEME = {
   ring: 'from-[#740001] via-[#c8aa6e] to-[#740001]',
   border: 'border-[#c8aa6e]/40 hover:border-[#ffd875]',
-  bg: 'bg-[#10081a]',
+  bg: 'house-card-hogwarts',
   badge: 'bg-[#2b1742] text-[#ffd875] border-[#ffd875]/40',
   crest: '🧙‍♂️',
   name: 'Hogwarts',
@@ -416,12 +416,17 @@ export const Lobby: React.FC<LobbyProps> = ({
                     key={p.id}
                     className={`holographic-card rounded-2xl p-3.5 flex items-center justify-between gap-3 border transition-all duration-300 relative overflow-hidden group ${
                       isMe
-                        ? 'border-[#ffd875] shadow-[0_0_20px_rgba(255,216,117,0.25)] ring-1 ring-[#ffd875]/50 bg-gradient-to-r from-[#211133] to-[#160b22]'
+                        ? 'border-[#ffd875] shadow-[0_0_24px_rgba(255,216,117,0.3)] ring-1 ring-[#ffd875]/70 bg-gradient-to-r from-[#2e1442] via-[#1b0d2a] to-[#12081d]'
                         : `${theme.border} ${theme.bg}`
                     }`}
                   >
+                    {/* Background Mascot Watermark */}
+                    <div className="absolute -right-2 -bottom-2 text-5xl opacity-[0.08] pointer-events-none select-none filter blur-[0.2px] group-hover:opacity-[0.16] group-hover:scale-115 transition-all duration-300">
+                      {theme.crest}
+                    </div>
+
                     {/* Left: Avatar with Glowing House Ring */}
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 relative z-10">
                       <div className={`w-11 h-11 rounded-2xl bg-gradient-to-tr ${theme.ring} p-[2px] shadow-[0_0_12px_rgba(0,0,0,0.5)] flex-shrink-0 relative`}>
                         <div className="w-full h-full rounded-[14px] bg-[#0d0716] flex items-center justify-center font-cinzel font-black text-sm text-[#ffd875]">
                           {theme.crest}
@@ -484,7 +489,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                           sound.playButtonChime();
                         }}
                         title="Xóa người chơi / bot này khỏi phòng"
-                        className="text-stone-500 hover:text-red-400 p-2 rounded-xl hover:bg-red-950/40 transition-all cursor-pointer opacity-80 hover:opacity-100 active:scale-95"
+                        className="text-stone-500 hover:text-red-400 p-2 rounded-xl hover:bg-red-950/40 transition-all cursor-pointer opacity-80 hover:opacity-100 active:scale-95 relative z-10"
                       >
                         <Trash2 size={16} />
                       </button>
