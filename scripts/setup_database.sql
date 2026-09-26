@@ -64,16 +64,12 @@ ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public access to rooms" ON public.rooms;
 DROP POLICY IF EXISTS "Public access to players" ON public.players;
 
--- Cho phép đọc / ghi dữ liệu phòng (Client tương tác qua mã phòng)
-CREATE POLICY "Public access to rooms" ON public.rooms
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
-
-CREATE POLICY "Public access to players" ON public.players
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
+-- Browser clients use the publishable/anon key, so unrestricted table access
+-- would expose and allow modification of every room. Room state is synchronized
+-- over Realtime; table access is intentionally disabled until a trusted backend
+-- can enforce per-room authorization.
+REVOKE ALL ON public.rooms, public.players FROM PUBLIC, anon, authenticated;
+UPDATE public.players SET role = NULL, word = NULL;
 
 -- 5. BẬT REALTIME PUBLICATION CHO SUPABASE
 -- Giúp máy khách tự động nhận sự kiện khi Database thay đổi (Postgres Changes)

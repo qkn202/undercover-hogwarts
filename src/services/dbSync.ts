@@ -84,8 +84,9 @@ export async function saveRoomToDatabase(state: RoomState): Promise<boolean> {
         room_code: code,
         name: p.name,
         house: p.house || 'GRYFFINDOR',
-        role: p.role || null,
-        word: p.word || null,
+        // Secret cards must only live in the assigned player's local state.
+        role: null,
+        word: null,
         is_host: Boolean(p.isHost),
         is_ai: Boolean(p.isAi),
         is_eliminated: Boolean(p.isEliminated),
@@ -146,8 +147,6 @@ export async function fetchRoomFromDatabase(roomCode: string): Promise<RoomState
       house: p.house,
       isHost: Boolean(p.is_host),
       isAi: Boolean(p.is_ai),
-      role: p.role,
-      word: p.word,
       isEliminated: Boolean(p.is_eliminated),
       speakingOrder: p.speaking_order,
     }));

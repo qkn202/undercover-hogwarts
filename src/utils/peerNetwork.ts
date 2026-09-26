@@ -8,6 +8,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publisha
 export class NetworkManager {
   private supabase: SupabaseClient;
   private channel: RealtimeChannel | null = null;
+  private secretChannel: RealtimeChannel | null = null;
   private roomCode: string = '';
   private myPlayerId: string = '';
   private hostPresent: boolean = true;
@@ -206,6 +207,33 @@ export class NetworkManager {
 
     this.onConnectionStatusChange?.('CONNECTING');
 
+    // Secret cards use a player-specific channel so they are never included in
+    // the room-wide broadcast received by every participant.
+    const secretChannelName = `room-${this.roomCode.toLowerCase()}-secret-${this.myPlayerId}`;
+    this.secretChannel = this.supabase.channel(secretChannelName, {
+      config: { broadcast: { self: false } },
+    });
+    this.secretChannel.on('broadcast', { event: 'secret_card' }, (payload: any) => {
+      const msg = payload.payload as PeerMessage;
+      if (msg && msg.senderId !== this.myPlayerId) this.handleIncomingMessage(msg);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout subscribing to private card channel')), 10000);
+      this.secretChannel?.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timeout);
+          resolve();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          clearTimeout(timeout);
+          reject(new Error(`Secret channel ${status}`));
+        }
+      });
+    }).catch((error) => {
+      if (this.secretChannel) this.supabase.removeChannel(this.secretChannel);
+      this.secretChannel = null;
+      throw error;
+    });
+
     return new Promise<void>((resolve, reject) => {
       let isSettled = false;
 
@@ -235,13 +263,17 @@ export class NetworkManager {
           }
           reject(new Error(`Không tìm thấy phòng "${this.roomCode}". Vui lòng kiểm tra lại mã phòng do Chủ phòng cung cấp!`));
         }
-      }, 4500);
+      }, 12000);
 
       try {
-        if (this.channel) {
-          try { this.supabase.removeChannel(this.channel); } catch {}
-          this.channel = null;
-        }
+          if (this.channel) {
+            try { this.supabase.removeChannel(this.channel); } catch {}
+            this.channel = null;
+          }
+          if (this.secretChannel) {
+            try { this.supabase.removeChannel(this.secretChannel); } catch {}
+            this.secretChannel = null;
+          }
 
         const channelName = `room-${this.roomCode.toLowerCase()}`;
         this.channel = this.supabase.channel(channelName, {
@@ -563,7 +595,18 @@ export class NetworkManager {
       },
     };
 
-    this.broadcast(msg);
+    const channel = this.supabase.channel(
+      `room-${this.roomCode.toLowerCase()}-secret-${playerId}`,
+      { config: { broadcast: { self: false } } }
+    );
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        channel.send({ type: 'broadcast', event: 'secret_card', payload: msg })
+          .finally(() => { this.supabase.removeChannel(channel); });
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        this.supabase.removeChannel(channel);
+      }
+    });
   }
 
   /**
@@ -642,6 +685,11 @@ export class NetworkManager {
           console.warn('[Supabase] Channel remove warning:', e2);
         }
       }
+    }
+    if (this.secretChannel) {
+      const chan = this.secretChannel;
+      this.secretChannel = null;
+      try { this.supabase.removeChannel(chan); } catch {}
     }
   }
 }
